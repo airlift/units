@@ -1,0 +1,16 @@
+*.iml
+*.ipr
+*.iws
+target/
+/var
+pom.xml.versionsBackup
+test-output/
+/atlassian-ide-plugin.xml
+.idea
+.*.swp
+.*.swo
+.project
+.classpath
+.settings
+.pmdruleset.xml
+.pmd
