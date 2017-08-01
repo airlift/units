@@ -15,10 +15,7 @@
  */
 package io.airlift.units;
 
-import com.google.common.base.Throwables;
-import io.airlift.testing.Assertions;
 import org.apache.bval.jsr.ApacheValidationProvider;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import javax.validation.ConstraintValidatorContext;
@@ -26,14 +23,16 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.ValidationException;
 import javax.validation.Validator;
-import javax.validation.metadata.ConstraintDescriptor;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Throwables.getRootCause;
+import static io.airlift.testing.Assertions.assertInstanceOf;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class TestDurationValidator
 {
@@ -78,10 +77,10 @@ public class TestDurationValidator
     {
         try {
             validator.validate(new BrokenMinAnnotation());
-            Assert.fail("expected a ValidationException caused by an IllegalArgumentException");
+            fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            Assertions.assertInstanceOf(Throwables.getRootCause(e), IllegalArgumentException.class);
+            assertInstanceOf(getRootCause(e), IllegalArgumentException.class);
         }
     }
 
@@ -90,10 +89,10 @@ public class TestDurationValidator
     {
         try {
             validator.validate(new BrokenMaxAnnotation());
-            Assert.fail("expected a ValidationException caused by an IllegalArgumentException");
+            fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            Assertions.assertInstanceOf(Throwables.getRootCause(e), IllegalArgumentException.class);
+            assertInstanceOf(getRootCause(e), IllegalArgumentException.class);
         }
     }
 
@@ -105,9 +104,7 @@ public class TestDurationValidator
         assertTrue(violations.isEmpty());
     }
 
-    // TODO: remove casts and @SuppressWarnings after moving to Java 8
     @Test
-    @SuppressWarnings("unchecked")
     public void testFailsMaxDurationConstraint()
     {
         ConstrainedDuration object = new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS));
@@ -115,12 +112,11 @@ public class TestDurationValidator
         assertEquals(violations.size(), 2);
 
         for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            Assertions.assertInstanceOf(((ConstraintDescriptor<MaxDuration>) violation.getConstraintDescriptor()).getAnnotation(), MaxDuration.class);
+            assertInstanceOf(violation.getConstraintDescriptor().getAnnotation(), MaxDuration.class);
         }
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testFailsMinDurationConstraint()
     {
         ConstrainedDuration object = new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS));
@@ -128,7 +124,7 @@ public class TestDurationValidator
         assertEquals(violations.size(), 2);
 
         for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            Assertions.assertInstanceOf(((ConstraintDescriptor<MinDuration>) violation.getConstraintDescriptor()).getAnnotation(), MinDuration.class);
+            assertInstanceOf(violation.getConstraintDescriptor().getAnnotation(), MinDuration.class);
         }
     }
 
