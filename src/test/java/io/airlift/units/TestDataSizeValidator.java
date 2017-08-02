@@ -16,7 +16,6 @@ package io.airlift.units;
 import org.apache.bval.jsr.ApacheValidationProvider;
 import org.testng.annotations.Test;
 
-import javax.validation.ConstraintValidatorContext;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.ValidationException;
@@ -25,12 +24,11 @@ import javax.validation.Validator;
 import java.util.Set;
 
 import static com.google.common.base.Throwables.getRootCause;
-import static io.airlift.testing.Assertions.assertInstanceOf;
+import static com.google.common.truth.Truth.assertThat;
+import static io.airlift.units.ConstraintValidatorSubject.assertThat;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -44,14 +42,15 @@ public class TestDataSizeValidator
         MaxDataSizeValidator maxValidator = new MaxDataSizeValidator();
         maxValidator.initialize(new MockMaxDataSize(new DataSize(8, MEGABYTE)));
 
-        assertTrue(maxValidator.isValid(new DataSize(0, KILOBYTE), new MockContext()));
-        assertTrue(maxValidator.isValid(new DataSize(5, KILOBYTE), new MockContext()));
-        assertTrue(maxValidator.isValid(new DataSize(5005, KILOBYTE), new MockContext()));
-        assertTrue(maxValidator.isValid(new DataSize(5, MEGABYTE), new MockContext()));
-        assertTrue(maxValidator.isValid(new DataSize(8, MEGABYTE), new MockContext()));
-        assertTrue(maxValidator.isValid(new DataSize(8192, KILOBYTE), new MockContext()));
-        assertFalse(maxValidator.isValid(new DataSize(9, MEGABYTE), new MockContext()));
-        assertFalse(maxValidator.isValid(new DataSize(1, GIGABYTE), new MockContext()));
+        assertThat(maxValidator).isValidFor(new DataSize(0, KILOBYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(0, KILOBYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(5, KILOBYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(5005, KILOBYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(5, MEGABYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(8, MEGABYTE));
+        assertThat(maxValidator).isValidFor(new DataSize(8192, KILOBYTE));
+        assertThat(maxValidator).isInvalidFor(new DataSize(9, MEGABYTE));
+        assertThat(maxValidator).isInvalidFor(new DataSize(1, GIGABYTE));
     }
 
     @Test
@@ -60,11 +59,11 @@ public class TestDataSizeValidator
         MinDataSizeValidator minValidator = new MinDataSizeValidator();
         minValidator.initialize(new MockMinDataSize(new DataSize(4, MEGABYTE)));
 
-        assertTrue(minValidator.isValid(new DataSize(4, MEGABYTE), new MockContext()));
-        assertTrue(minValidator.isValid(new DataSize(4096, KILOBYTE), new MockContext()));
-        assertTrue(minValidator.isValid(new DataSize(5, MEGABYTE), new MockContext()));
-        assertFalse(minValidator.isValid(new DataSize(0, GIGABYTE), new MockContext()));
-        assertFalse(minValidator.isValid(new DataSize(1, MEGABYTE), new MockContext()));
+        assertThat(minValidator).isValidFor(new DataSize(4, MEGABYTE));
+        assertThat(minValidator).isValidFor(new DataSize(4096, KILOBYTE));
+        assertThat(minValidator).isValidFor(new DataSize(5, MEGABYTE));
+        assertThat(minValidator).isInvalidFor(new DataSize(0, GIGABYTE));
+        assertThat(minValidator).isInvalidFor(new DataSize(1, MEGABYTE));
     }
 
     @Test
@@ -87,7 +86,7 @@ public class TestDataSizeValidator
             fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            assertInstanceOf(getRootCause(e), IllegalArgumentException.class);
+            assertThat(getRootCause(e)).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -99,7 +98,7 @@ public class TestDataSizeValidator
             fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            assertInstanceOf(getRootCause(e), IllegalArgumentException.class);
+            assertThat(getRootCause(e)).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -116,10 +115,10 @@ public class TestDataSizeValidator
     {
         ConstrainedDataSize object = new ConstrainedDataSize(new DataSize(11, MEGABYTE));
         Set<ConstraintViolation<ConstrainedDataSize>> violations = VALIDATOR.validate(object);
-        assertEquals(violations.size(), 2);
+        assertThat(violations).hasSize(2);
 
         for (ConstraintViolation<ConstrainedDataSize> violation : violations) {
-            assertInstanceOf(violation.getConstraintDescriptor().getAnnotation(), MaxDataSize.class);
+            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MaxDataSize.class);
         }
     }
 
@@ -128,38 +127,10 @@ public class TestDataSizeValidator
     {
         ConstrainedDataSize object = new ConstrainedDataSize(new DataSize(1, MEGABYTE));
         Set<ConstraintViolation<ConstrainedDataSize>> violations = VALIDATOR.validate(object);
-        assertEquals(violations.size(), 2);
+        assertThat(violations).hasSize(2);
 
         for (ConstraintViolation<ConstrainedDataSize> violation : violations) {
-            assertInstanceOf(violation.getConstraintDescriptor().getAnnotation(), MinDataSize.class);
-        }
-    }
-
-    private static class MockContext
-            implements ConstraintValidatorContext
-    {
-        @Override
-        public void disableDefaultConstraintViolation()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public String getDefaultConstraintMessageTemplate()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ConstraintViolationBuilder buildConstraintViolationWithTemplate(String s)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T unwrap(Class<T> type)
-        {
-            throw new UnsupportedOperationException();
+            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MinDataSize.class);
         }
     }
 
