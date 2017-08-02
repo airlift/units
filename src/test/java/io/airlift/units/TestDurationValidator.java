@@ -15,25 +15,21 @@
  */
 package io.airlift.units;
 
-import com.google.common.base.Throwables;
-import io.airlift.testing.Assertions;
 import org.apache.bval.jsr.ApacheValidationProvider;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import javax.validation.ConstraintValidatorContext;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.ValidationException;
 import javax.validation.Validator;
-import javax.validation.metadata.ConstraintDescriptor;
 
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertTrue;
+import static com.google.common.base.Throwables.getRootCause;
+import static com.google.common.truth.Truth.assertThat;
+import static io.airlift.units.ConstraintValidatorSubject.assertThat;
+import static org.testng.Assert.fail;
 
 public class TestDurationValidator
 {
@@ -45,9 +41,9 @@ public class TestDurationValidator
         MaxDurationValidator maxValidator = new MaxDurationValidator();
         maxValidator.initialize(new MockMaxDuration(new Duration(5, TimeUnit.SECONDS)));
 
-        assertTrue(maxValidator.isValid(new Duration(0, TimeUnit.SECONDS), new MockContext()));
-        assertTrue(maxValidator.isValid(new Duration(5, TimeUnit.SECONDS), new MockContext()));
-        assertFalse(maxValidator.isValid(new Duration(6, TimeUnit.SECONDS), new MockContext()));
+        assertThat(maxValidator).isValidFor(new Duration(0, TimeUnit.SECONDS));
+        assertThat(maxValidator).isValidFor(new Duration(5, TimeUnit.SECONDS));
+        assertThat(maxValidator).isInvalidFor(new Duration(6, TimeUnit.SECONDS));
     }
 
     @Test
@@ -56,9 +52,9 @@ public class TestDurationValidator
         MinDurationValidator minValidator = new MinDurationValidator();
         minValidator.initialize(new MockMinDuration(new Duration(5, TimeUnit.SECONDS)));
 
-        assertTrue(minValidator.isValid(new Duration(5, TimeUnit.SECONDS), new MockContext()));
-        assertTrue(minValidator.isValid(new Duration(6, TimeUnit.SECONDS), new MockContext()));
-        assertFalse(minValidator.isValid(new Duration(0, TimeUnit.SECONDS), new MockContext()));
+        assertThat(minValidator).isValidFor(new Duration(5, TimeUnit.SECONDS));
+        assertThat(minValidator).isValidFor(new Duration(6, TimeUnit.SECONDS));
+        assertThat(minValidator).isInvalidFor(new Duration(0, TimeUnit.SECONDS));
     }
 
     @Test
@@ -78,10 +74,10 @@ public class TestDurationValidator
     {
         try {
             validator.validate(new BrokenMinAnnotation());
-            Assert.fail("expected a ValidationException caused by an IllegalArgumentException");
+            fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            Assertions.assertInstanceOf(Throwables.getRootCause(e), IllegalArgumentException.class);
+            assertThat(getRootCause(e)).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -90,10 +86,10 @@ public class TestDurationValidator
     {
         try {
             validator.validate(new BrokenMaxAnnotation());
-            Assert.fail("expected a ValidationException caused by an IllegalArgumentException");
+            fail("expected a ValidationException caused by an IllegalArgumentException");
         }
         catch (ValidationException e) {
-            Assertions.assertInstanceOf(Throwables.getRootCause(e), IllegalArgumentException.class);
+            assertThat(getRootCause(e)).isInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -102,61 +98,30 @@ public class TestDurationValidator
     {
         ConstrainedDuration object = new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS));
         Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
-        assertTrue(violations.isEmpty());
+        assertThat(violations).isEmpty();
     }
 
-    // TODO: remove casts and @SuppressWarnings after moving to Java 8
     @Test
-    @SuppressWarnings("unchecked")
     public void testFailsMaxDurationConstraint()
     {
         ConstrainedDuration object = new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS));
         Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
-        assertEquals(violations.size(), 2);
+        assertThat(violations).hasSize(2);
 
         for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            Assertions.assertInstanceOf(((ConstraintDescriptor<MaxDuration>) violation.getConstraintDescriptor()).getAnnotation(), MaxDuration.class);
+            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MaxDuration.class);
         }
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testFailsMinDurationConstraint()
     {
         ConstrainedDuration object = new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS));
         Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
-        assertEquals(violations.size(), 2);
+        assertThat(violations).hasSize(2);
 
         for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            Assertions.assertInstanceOf(((ConstraintDescriptor<MinDuration>) violation.getConstraintDescriptor()).getAnnotation(), MinDuration.class);
-        }
-    }
-
-    private static class MockContext
-            implements ConstraintValidatorContext
-    {
-        @Override
-        public void disableDefaultConstraintViolation()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public String getDefaultConstraintMessageTemplate()
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public ConstraintValidatorContext.ConstraintViolationBuilder buildConstraintViolationWithTemplate(String s)
-        {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public <T> T unwrap(Class<T> type)
-        {
-            throw new UnsupportedOperationException();
+            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MinDuration.class);
         }
     }
 

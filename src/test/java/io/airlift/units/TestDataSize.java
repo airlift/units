@@ -17,13 +17,12 @@ package io.airlift.units;
 
 import com.google.common.collect.ImmutableList;
 import io.airlift.json.JsonCodec;
-import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.Locale;
 
+import static com.google.common.truth.Truth.assertThat;
 import static io.airlift.testing.EquivalenceTester.comparisonTester;
 import static io.airlift.units.DataSize.Unit.BYTE;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
@@ -64,9 +63,9 @@ public class TestDataSize
     {
         DataSize size = new DataSize(factor, toUnit);
         DataSize actual = size.convertToMostSuccinctDataSize();
-        assertEquals(actual, new DataSize(1, unit));
-        assertEquals(actual.getValue(unit), 1.0, 0.001);
-        assertEquals(actual.getUnit(), unit);
+        assertThat(actual).isEqualTo(new DataSize(1, unit));
+        assertThat(actual.getValue(unit)).isWithin(0.001).of(1.0);
+        assertThat(actual.getUnit()).isEqualTo(unit);
     }
 
     @Test
@@ -80,7 +79,7 @@ public class TestDataSize
                 .check();
     }
 
-    private Iterable<DataSize> group(double bytes)
+    private static Iterable<DataSize> group(double bytes)
     {
         return ImmutableList.of(
                 new DataSize(bytes, BYTE),
@@ -146,30 +145,35 @@ public class TestDataSize
         DataSize.valueOf("1.2x4 B");
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is negative")
     public void testConstructorRejectsNegativeSize()
     {
         new DataSize(-1, BYTE);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is infinite")
     public void testConstructorRejectsInfiniteSize()
     {
         new DataSize(Double.POSITIVE_INFINITY, BYTE);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is infinite")
     public void testConstructorRejectsInfiniteSize2()
     {
         new DataSize(Double.NEGATIVE_INFINITY, BYTE);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a number")
     public void testConstructorRejectsNaN()
     {
         new DataSize(Double.NaN, BYTE);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "unit is null")
     public void testConstructorRejectsNullUnit()
     {
@@ -246,14 +250,15 @@ public class TestDataSize
         assertJsonRoundTrip(new DataSize(1.234, PETABYTE));
     }
 
-    private void assertJsonRoundTrip(DataSize dataSize)
-            throws IOException
+    private static void assertJsonRoundTrip(DataSize dataSize)
     {
         JsonCodec<DataSize> dataSizeCodec = JsonCodec.jsonCodec(DataSize.class);
         String json = dataSizeCodec.toJson(dataSize);
         DataSize dataSizeCopy = dataSizeCodec.fromJson(json);
-        double delta = dataSize.toBytes() * 0.01;
-        Assert.assertEquals(dataSize.toBytes(), dataSizeCopy.toBytes(), delta);
+
+        assertThat(dataSize.getValue(BYTE))
+                .isWithin(dataSize.getValue(BYTE) * 0.01)
+                .of(dataSizeCopy.getValue(BYTE));
     }
 
     @DataProvider(name = "parseableValues", parallel = true)

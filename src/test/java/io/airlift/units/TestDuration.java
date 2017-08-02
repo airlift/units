@@ -19,11 +19,12 @@ import io.airlift.json.JsonCodec;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.truth.Truth.assertThat;
 import static io.airlift.testing.EquivalenceTester.comparisonTester;
 import static io.airlift.units.Duration.succinctDuration;
 import static io.airlift.units.Duration.succinctNanos;
@@ -57,28 +58,28 @@ public class TestDuration
     {
         double millis = 12346789.0d;
         Duration duration = new Duration(millis, MILLISECONDS);
-        assertEquals(duration.getValue(MILLISECONDS), millis);
-        assertEquals(duration.getValue(SECONDS), millis / 1000, 0.001);
-        assertEquals(duration.getValue(MINUTES), millis / 1000 / 60, 0.001);
-        assertEquals(duration.getValue(HOURS), millis / 1000 / 60 / 60, 0.001);
-        assertEquals(duration.getValue(DAYS), millis / 1000 / 60 / 60 / 24, 0.001);
+        assertThat(duration.getValue(MILLISECONDS)).isEqualTo(millis);
+        assertThat(duration.getValue(SECONDS)).isWithin(0.001).of(millis / 1000);
+        assertThat(duration.getValue(MINUTES)).isWithin(0.001).of(millis / 1000 / 60);
+        assertThat(duration.getValue(HOURS)).isWithin(0.001).of(millis / 1000 / 60 / 60);
+        assertThat(duration.getValue(DAYS)).isWithin(0.001).of(millis / 1000 / 60 / 60 / 24);
 
         double days = 3.0;
         duration = new Duration(days, DAYS);
-        assertEquals(duration.getValue(DAYS), days);
-        assertEquals(duration.getValue(HOURS), days * 24, 0.001);
-        assertEquals(duration.getValue(MINUTES), days * 24 * 60, 0.001);
-        assertEquals(duration.getValue(SECONDS), days * 24 * 60 * 60, 0.001);
-        assertEquals(duration.getValue(MILLISECONDS), days * 24 * 60 * 60 * 1000, 0.001);
+        assertThat(duration.getValue(DAYS)).isEqualTo(days);
+        assertThat(duration.getValue(HOURS)).isWithin(0.001).of(days * 24);
+        assertThat(duration.getValue(MINUTES)).isWithin(0.001).of(days * 24 * 60);
+        assertThat(duration.getValue(SECONDS)).isWithin(0.001).of(days * 24 * 60 * 60);
+        assertThat(duration.getValue(MILLISECONDS)).isWithin(0.001).of(days * 24 * 60 * 60 * 1000);
     }
 
     @Test(dataProvider = "conversions")
     public void testConversions(TimeUnit unit, TimeUnit toTimeUnit, double factor)
     {
         Duration duration = new Duration(1, unit).convertTo(toTimeUnit);
-        assertEquals(duration.getUnit(), toTimeUnit);
-        assertEquals(duration.getValue(), factor, factor * 0.001);
-        assertEquals(duration.getValue(toTimeUnit), factor, factor * 0.001);
+        assertThat(duration.getUnit()).isEqualTo(toTimeUnit);
+        assertThat(duration.getValue()).isWithin(factor * 0.001).of(factor);
+        assertThat(duration.getValue(toTimeUnit)).isWithin(factor * 0.001).of(factor);
     }
 
     @Test(dataProvider = "conversions")
@@ -86,11 +87,9 @@ public class TestDuration
     {
         Duration duration = new Duration(factor, toTimeUnit);
         Duration actual = duration.convertToMostSuccinctTimeUnit();
-        assertEquals(actual.getValue(toTimeUnit), factor, factor * 0.001);
-        assertEquals(actual.getValue(unit), 1.0, 0.001);
-        if (actual.getUnit() != unit) {
-            assertEquals(actual.getUnit(), unit);
-        }
+        assertThat(actual.getValue(toTimeUnit)).isWithin(factor * 0.001).of(factor);
+        assertThat(actual.getValue(unit)).isWithin(0.001).of(1.0);
+        assertThat(actual.getUnit()).isEqualTo(unit);
     }
 
     @Test
@@ -104,9 +103,9 @@ public class TestDuration
                 .check();
     }
 
-    private ArrayList<Duration> generateTimeBucket(double seconds)
+    private static List<Duration> generateTimeBucket(double seconds)
     {
-        ArrayList<Duration> bucket = new ArrayList<>();
+        List<Duration> bucket = new ArrayList<>();
         bucket.add(new Duration(seconds * 1000 * 1000 * 1000, NANOSECONDS));
         bucket.add(new Duration(seconds * 1000 * 1000, MICROSECONDS));
         bucket.add(new Duration(seconds * 1000, MILLISECONDS));
@@ -175,30 +174,35 @@ public class TestDuration
         Duration.valueOf("1.2x4 s");
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is negative")
     public void testConstructorRejectsNegativeValue()
     {
         new Duration(-1, SECONDS);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite")
     public void testConstructorRejectsInfiniteValue()
     {
         new Duration(Double.POSITIVE_INFINITY, SECONDS);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite")
     public void testConstructorRejectsInfiniteValue2()
     {
         new Duration(Double.NEGATIVE_INFINITY, SECONDS);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is not a number")
     public void testConstructorRejectsNaN()
     {
         new Duration(Double.NaN, SECONDS);
     }
 
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "unit is null")
     public void testConstructorRejectsNullUnit()
     {
@@ -224,13 +228,13 @@ public class TestDuration
     {
         double nanos = 1.0d;
         Duration duration = new Duration(nanos, NANOSECONDS);
-        assertEquals(duration.getValue(), nanos);
-        assertEquals(duration.getValue(NANOSECONDS), nanos);
-        assertEquals(duration.getValue(MILLISECONDS), nanos / 1000000);
-        assertEquals(duration.getValue(SECONDS), nanos / 1000000 / 1000);
-        assertEquals(duration.getValue(MINUTES), nanos / 1000000 / 1000 / 60, 1.0E10);
-        assertEquals(duration.getValue(HOURS), nanos / 1000000 / 1000 / 60 / 60, 1.0E10);
-        assertEquals(duration.getValue(DAYS), nanos / 1000000 / 1000 / 60 / 60 / 24, 1.0E10);
+        assertThat(duration.getValue()).isEqualTo(nanos);
+        assertThat(duration.getValue(NANOSECONDS)).isEqualTo(nanos);
+        assertThat(duration.getValue(MILLISECONDS)).isEqualTo(nanos / 1000000);
+        assertThat(duration.getValue(SECONDS)).isEqualTo(nanos / 1000000 / 1000);
+        assertThat(duration.getValue(MINUTES)).isWithin(1.0E10).of(nanos / 1000000 / 1000 / 60);
+        assertThat(duration.getValue(HOURS)).isWithin(1.0E10).of(nanos / 1000000 / 1000 / 60 / 60);
+        assertThat(duration.getValue(DAYS)).isWithin(1.0E10).of(nanos / 1000000 / 1000 / 60 / 60 / 24);
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -271,17 +275,19 @@ public class TestDuration
         assertJsonRoundTrip(new Duration(1.234, DAYS));
     }
 
-    private void assertJsonRoundTrip(Duration duration)
-            throws IOException
+    private static void assertJsonRoundTrip(Duration duration)
     {
         JsonCodec<Duration> durationCodec = JsonCodec.jsonCodec(Duration.class);
         String json = durationCodec.toJson(duration);
         Duration durationCopy = durationCodec.fromJson(json);
-        double delta = duration.getValue(MILLISECONDS) * 0.01;
-        assertEquals(duration.getValue(MILLISECONDS), durationCopy.getValue(MILLISECONDS), delta);
+
+        assertThat(duration.getValue(MILLISECONDS))
+                .isWithin(duration.getValue(MILLISECONDS) * 0.01)
+                .of(durationCopy.getValue(MILLISECONDS));
     }
 
-    private void failDurationConstruction(double value, TimeUnit timeUnit)
+    @SuppressWarnings("ResultOfObjectAllocationIgnored")
+    private static void failDurationConstruction(double value, TimeUnit timeUnit)
     {
         try {
             new Duration(value, timeUnit);
