@@ -56,7 +56,7 @@ public final class Duration
 
     public static Duration succinctDuration(double value, TimeUnit unit)
     {
-        return new Duration(value, unit).convertToMostSuccinctTimeUnit();
+        return toSuccinctDuration(value, unit);
     }
 
     private final double value;
@@ -90,8 +90,7 @@ public final class Duration
 
     public double getValue(TimeUnit timeUnit)
     {
-        requireNonNull(timeUnit, "timeUnit is null");
-        return value * (millisPerTimeUnit(this.unit) * 1.0 / millisPerTimeUnit(timeUnit));
+        return getValue(value, unit, timeUnit);
     }
 
     public long roundTo(TimeUnit timeUnit)
@@ -111,17 +110,22 @@ public final class Duration
 
     public Duration convertToMostSuccinctTimeUnit()
     {
+        return toSuccinctDuration(value, unit);
+    }
+
+    private static Duration toSuccinctDuration(double value, TimeUnit unit)
+    {
         TimeUnit unitToUse = NANOSECONDS;
         for (TimeUnit unitToTest : TIME_UNITS) {
             // since time units are powers of ten, we can get rounding errors here, so fuzzy match
-            if (getValue(unitToTest) > 0.9999) {
+            if (getValue(value, unit, unitToTest) > 0.9999) {
                 unitToUse = unitToTest;
             }
             else {
                 break;
             }
         }
-        return convertTo(unitToUse);
+        return new Duration(getValue(value, unit, unitToUse), unitToUse);
     }
 
     @JsonValue
@@ -252,5 +256,12 @@ public final class Duration
             default:
                 throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
         }
+    }
+
+    private static double getValue(double value, TimeUnit from, TimeUnit to)
+    {
+        requireNonNull(from, "from is null");
+        requireNonNull(to, "to is null");
+        return value * (millisPerTimeUnit(from) * 1.0 / millisPerTimeUnit(to));
     }
 }
