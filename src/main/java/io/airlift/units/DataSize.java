@@ -45,7 +45,7 @@ public class DataSize
 
     public static DataSize succinctDataSize(double size, Unit unit)
     {
-        return new DataSize(size, unit).convertToMostSuccinctDataSize();
+        return convertToMostSuccinctDataSize(size, unit);
     }
 
     private final double value;
@@ -81,7 +81,7 @@ public class DataSize
 
     public double getValue(Unit unit)
     {
-        return value * (this.unit.getFactor() * 1.0 / unit.getFactor());
+        return getValue(value, this.unit, unit);
     }
 
     public long roundTo(Unit unit)
@@ -100,16 +100,7 @@ public class DataSize
 
     public DataSize convertToMostSuccinctDataSize()
     {
-        Unit unitToUse = Unit.BYTE;
-        for (Unit unitToTest : DATASIZE_UNITS) {
-            if (getValue(unitToTest) >= 1.0) {
-                unitToUse = unitToTest;
-            }
-            else {
-                break;
-            }
-        }
-        return convertTo(unitToUse);
+        return convertToMostSuccinctDataSize(value, unit);
     }
 
     @JsonValue
@@ -204,5 +195,26 @@ public class DataSize
         {
             return unitString;
         }
+    }
+
+    private static double getValue(double value, Unit from, Unit to)
+    {
+        requireNonNull(from, "from is null");
+        requireNonNull(to, "to is null");
+        return value * (from.getFactor() * 1.0 / to.getFactor());
+    }
+
+    private static DataSize convertToMostSuccinctDataSize(double value, Unit unit)
+    {
+        Unit unitToUse = Unit.BYTE;
+        for (Unit unitToTest : DATASIZE_UNITS) {
+            if (getValue(value, unit, unitToTest) >= 1.0) {
+                unitToUse = unitToTest;
+            }
+            else {
+                break;
+            }
+        }
+        return new DataSize(getValue(value, unit, unitToUse), unitToUse);
     }
 }
