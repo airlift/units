@@ -27,7 +27,7 @@ import static io.airlift.units.Preconditions.checkState;
 import static java.lang.Math.floor;
 import static java.util.Objects.requireNonNull;
 
-public class DataSize
+public final class DataSize
         implements Comparable<DataSize>
 {
     private static final Pattern PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
