@@ -28,8 +28,8 @@ import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
 
 public class TestDataSizeValidator
 {
@@ -79,57 +79,48 @@ public class TestDataSizeValidator
     @Test
     public void testDetectsBrokenMinAnnotation()
     {
-        try {
-            VALIDATOR.validate(new BrokenMinAnnotation());
-            fail("expected a ValidationException caused by an IllegalArgumentException");
-        }
-        catch (ValidationException e) {
-            assertThat(e).hasRootCauseInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMinAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
     }
 
     @Test
     public void testDetectsBrokenMaxAnnotation()
     {
-        try {
-            VALIDATOR.validate(new BrokenMaxAnnotation());
-            fail("expected a ValidationException caused by an IllegalArgumentException");
-        }
-        catch (ValidationException e) {
-            assertThat(e).hasRootCauseInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMaxAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
     }
 
     @Test
     public void testPassesValidation()
     {
-        ConstrainedDataSize object = new ConstrainedDataSize(new DataSize(7, MEGABYTE));
-        Set<ConstraintViolation<ConstrainedDataSize>> violations = VALIDATOR.validate(object);
-        assertTrue(violations.isEmpty());
+        assertTrue(VALIDATOR.validate(new ConstrainedDataSize(new DataSize(7, MEGABYTE)))
+                .isEmpty());
     }
 
     @Test
     public void testFailsMaxDataSizeConstraint()
     {
-        ConstrainedDataSize object = new ConstrainedDataSize(new DataSize(11, MEGABYTE));
-        Set<ConstraintViolation<ConstrainedDataSize>> violations = VALIDATOR.validate(object);
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(11, MEGABYTE)));
         assertThat(violations).hasSize(2);
-
-        for (ConstraintViolation<ConstrainedDataSize> violation : violations) {
-            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MaxDataSize.class);
-        }
+        assertThat(violations.stream().map(violation -> violation.getConstraintDescriptor().getAnnotation()))
+                .allMatch(MaxDataSize.class::isInstance);
+        assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
+                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
     }
 
     @Test
     public void testFailsMinDataSizeConstraint()
     {
-        ConstrainedDataSize object = new ConstrainedDataSize(new DataSize(1, MEGABYTE));
-        Set<ConstraintViolation<ConstrainedDataSize>> violations = VALIDATOR.validate(object);
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(1, MEGABYTE)));
         assertThat(violations).hasSize(2);
-
-        for (ConstraintViolation<ConstrainedDataSize> violation : violations) {
-            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MinDataSize.class);
-        }
+        assertThat(violations.stream().map(violation -> violation.getConstraintDescriptor().getAnnotation()))
+                .allMatch(MinDataSize.class::isInstance);
+        assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
+                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
     }
 
     @SuppressWarnings("UnusedDeclaration")
@@ -162,9 +153,9 @@ public class TestDataSizeValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class NullMinAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDataSize("1MB")
         public DataSize getConstrainedByMin()
         {
@@ -172,9 +163,9 @@ public class TestDataSizeValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class NullMaxAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MaxDataSize("1MB")
         public DataSize getConstrainedByMin()
         {
@@ -182,9 +173,9 @@ public class TestDataSizeValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class BrokenMinAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDataSize("broken")
         public DataSize getConstrainedByMin()
         {
@@ -192,9 +183,9 @@ public class TestDataSizeValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class BrokenMaxAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDataSize("broken")
         public DataSize getConstrainedByMin()
         {
