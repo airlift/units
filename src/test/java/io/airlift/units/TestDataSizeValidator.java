@@ -138,6 +138,8 @@ public class TestDataSizeValidator
                 .allMatch(MaxDataSize.class::isInstance);
         assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
+        assertThat(violations.stream().map(ConstraintViolation::getMessage))
+                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
 
         violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))));
         assertThat(violations).hasSize(2);
@@ -145,6 +147,8 @@ public class TestDataSizeValidator
                 .allMatch(MaxDataSize.class::isInstance);
         assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
+        assertThat(violations.stream().map(ConstraintViolation::getMessage))
+                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
     }
 
     @Test
@@ -156,6 +160,8 @@ public class TestDataSizeValidator
                 .allMatch(MinDataSize.class::isInstance);
         assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
+        assertThat(violations.stream().map(ConstraintViolation::getMessage))
+                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
 
         violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))));
         assertThat(violations).hasSize(2);
@@ -163,6 +169,8 @@ public class TestDataSizeValidator
                 .allMatch(MinDataSize.class::isInstance);
         assertThat(violations.stream().map(violation -> violation.getPropertyPath().toString()))
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
+        assertThat(violations.stream().map(ConstraintViolation::getMessage))
+                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
     }
 
     @SuppressWarnings("UnusedDeclaration")
