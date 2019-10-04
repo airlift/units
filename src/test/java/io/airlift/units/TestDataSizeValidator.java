@@ -21,6 +21,7 @@ import javax.validation.Validation;
 import javax.validation.ValidationException;
 import javax.validation.Validator;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static io.airlift.units.ConstraintValidatorAssert.assertThat;
@@ -83,6 +84,15 @@ public class TestDataSizeValidator
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+
+        assertThatThrownBy(() -> VALIDATOR.validate(new MinAnnotationOnOptional()))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("No compliant io.airlift.units.MinDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMinAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
     }
 
     @Test
@@ -92,12 +102,27 @@ public class TestDataSizeValidator
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+
+        assertThatThrownBy(() -> VALIDATOR.validate(new MaxAnnotationOnOptional()))
+                .isInstanceOf(ValidationException.class)
+                .hasMessage("No compliant io.airlift.units.MaxDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMaxAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
     }
 
     @Test
     public void testPassesValidation()
     {
         assertTrue(VALIDATOR.validate(new ConstrainedDataSize(new DataSize(7, MEGABYTE))).isEmpty());
+
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(7, MEGABYTE))))).isEmpty();
+
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.empty()))).isEmpty();
+
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(null))).isEmpty();
     }
 
     @Test
@@ -111,12 +136,30 @@ public class TestDataSizeValidator
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
+
+        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))));
+        assertThat(violations).hasSize(2);
+        assertThat(violations)
+                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
+                .allMatch(MaxDataSize.class::isInstance);
+        assertThat(violations)
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
     }
 
     @Test
     public void testFailsMinDataSizeConstraint()
     {
         Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(1, MEGABYTE)));
+        assertThat(violations).hasSize(2);
+        assertThat(violations)
+                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
+                .allMatch(MinDataSize.class::isInstance);
+        assertThat(violations)
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
+
+        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))));
         assertThat(violations).hasSize(2);
         assertThat(violations)
                 .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
@@ -151,6 +194,32 @@ public class TestDataSizeValidator
         @MinDataSize("5000kB")
         @MaxDataSize("10000kB")
         public DataSize getConstrainedByMinAndMax()
+        {
+            return dataSize;
+        }
+    }
+
+    @SuppressWarnings("UnusedDeclaration")
+    public static class ConstrainedOptionalDataSize
+    {
+        private final Optional<DataSize> dataSize;
+
+        public ConstrainedOptionalDataSize(Optional<DataSize> dataSize)
+        {
+            this.dataSize = dataSize;
+        }
+
+        public Optional<@MinDataSize("5MB") DataSize> getConstrainedByMin()
+        {
+            return dataSize;
+        }
+
+        public Optional<@MaxDataSize("10MB") DataSize> getConstrainedByMax()
+        {
+            return dataSize;
+        }
+
+        public Optional<@MinDataSize("5000kB") @MaxDataSize("10000kB") DataSize> getConstrainedByMinAndMax()
         {
             return dataSize;
         }
@@ -193,6 +262,44 @@ public class TestDataSizeValidator
         public DataSize getConstrainedByMin()
         {
             return new DataSize(32, KILOBYTE);
+        }
+    }
+
+    public static class MinAnnotationOnOptional
+    {
+        @SuppressWarnings("UnusedDeclaration")
+        @MinDataSize("1MB")
+        public Optional<DataSize> getConstrainedByMin()
+        {
+            return Optional.empty();
+        }
+    }
+
+    public static class MaxAnnotationOnOptional
+    {
+        @SuppressWarnings("UnusedDeclaration")
+        @MaxDataSize("1MB")
+        public Optional<DataSize> getConstrainedByMin()
+        {
+            return Optional.empty();
+        }
+    }
+
+    public static class BrokenOptionalMinAnnotation
+    {
+        @SuppressWarnings("UnusedDeclaration")
+        public Optional<@MinDataSize("broken") DataSize> getConstrainedByMin()
+        {
+            return Optional.empty();
+        }
+    }
+
+    public static class BrokenOptionalMaxAnnotation
+    {
+        @SuppressWarnings("UnusedDeclaration")
+        public Optional<@MaxDataSize("broken") DataSize> getConstrainedByMax()
+        {
+            return Optional.empty();
         }
     }
 }
