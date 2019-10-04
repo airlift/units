@@ -128,6 +128,9 @@ public class TestDurationValidator
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
 
         violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(11, TimeUnit.SECONDS))));
         assertThat(violations).hasSize(2);
@@ -137,6 +140,9 @@ public class TestDurationValidator
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
     }
 
     @Test
@@ -150,6 +156,9 @@ public class TestDurationValidator
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
 
         violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(1, TimeUnit.SECONDS))));
         assertThat(violations).hasSize(2);
@@ -159,6 +168,9 @@ public class TestDurationValidator
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
     }
 
     @SuppressWarnings("UnusedDeclaration")
