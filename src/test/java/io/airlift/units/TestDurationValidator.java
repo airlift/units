@@ -28,11 +28,11 @@ import java.util.concurrent.TimeUnit;
 
 import static io.airlift.units.ConstraintValidatorAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.testng.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestDurationValidator
 {
-    private static final Validator validator = Validation.byProvider(ApacheValidationProvider.class).configure().buildValidatorFactory().getValidator();
+    private static final Validator VALIDATOR = Validation.byProvider(ApacheValidationProvider.class).configure().buildValidatorFactory().getValidator();
 
     @Test
     public void testMaxDurationValidator()
@@ -59,69 +59,63 @@ public class TestDurationValidator
     @Test
     public void testAllowsNullMinAnnotation()
     {
-        validator.validate(new NullMinAnnotation());
+        VALIDATOR.validate(new NullMinAnnotation());
     }
 
     @Test
     public void testAllowsNullMaxAnnotation()
     {
-        validator.validate(new NullMaxAnnotation());
+        VALIDATOR.validate(new NullMaxAnnotation());
     }
 
     @Test
     public void testDetectsBrokenMinAnnotation()
     {
-        try {
-            validator.validate(new BrokenMinAnnotation());
-            fail("expected a ValidationException caused by an IllegalArgumentException");
-        }
-        catch (ValidationException e) {
-            assertThat(e).hasRootCauseInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMinAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
     }
 
     @Test
     public void testDetectsBrokenMaxAnnotation()
     {
-        try {
-            validator.validate(new BrokenMaxAnnotation());
-            fail("expected a ValidationException caused by an IllegalArgumentException");
-        }
-        catch (ValidationException e) {
-            assertThat(e).hasRootCauseInstanceOf(IllegalArgumentException.class);
-        }
+        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMaxAnnotation()))
+                .isInstanceOf(ValidationException.class)
+                .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
     }
 
     @Test
     public void testPassesValidation()
     {
-        ConstrainedDuration object = new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS));
-        Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
-        assertThat(violations).isEmpty();
+        assertThat(VALIDATOR.validate(new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS)))).isEmpty();
     }
 
     @Test
     public void testFailsMaxDurationConstraint()
     {
-        ConstrainedDuration object = new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS));
-        Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS)));
         assertThat(violations).hasSize(2);
-
-        for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MaxDuration.class);
-        }
+        assertThat(violations)
+                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
+                .allMatch(MaxDuration.class::isInstance);
+        assertThat(violations)
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
     }
 
     @Test
     public void testFailsMinDurationConstraint()
     {
-        ConstrainedDuration object = new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS));
-        Set<ConstraintViolation<ConstrainedDuration>> violations = validator.validate(object);
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS)));
         assertThat(violations).hasSize(2);
-
-        for (ConstraintViolation<ConstrainedDuration> violation : violations) {
-            assertThat(violation.getConstraintDescriptor().getAnnotation()).isInstanceOf(MinDuration.class);
-        }
+        assertThat(violations)
+                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
+                .allMatch(MinDuration.class::isInstance);
+        assertThat(violations)
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
     }
 
     @SuppressWarnings("UnusedDeclaration")
@@ -154,9 +148,9 @@ public class TestDurationValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class NullMinAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDuration("1s")
         public Duration getConstrainedByMin()
         {
@@ -164,9 +158,9 @@ public class TestDurationValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class NullMaxAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MaxDuration("1s")
         public Duration getConstrainedByMin()
         {
@@ -174,9 +168,9 @@ public class TestDurationValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class BrokenMinAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDuration("broken")
         public Duration getConstrainedByMin()
         {
@@ -184,9 +178,9 @@ public class TestDurationValidator
         }
     }
 
-    @SuppressWarnings("UnusedDeclaration")
     public static class BrokenMaxAnnotation
     {
+        @SuppressWarnings("UnusedDeclaration")
         @MinDuration("broken")
         public Duration getConstrainedByMin()
         {
