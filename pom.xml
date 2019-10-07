@@ -34,7 +34,6 @@
 
     <modules>
         <module>units</module>
-        <module>units-units</module>
         <module>units-validation</module>
     </modules>
 
@@ -43,12 +42,6 @@
             <dependency>
                 <groupId>io.airlift</groupId>
                 <artifactId>units</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.airlift</groupId>
-                <artifactId>units-units</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
