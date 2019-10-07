@@ -1,4 +1,6 @@
 /*
+ * Copyright 2010 Proofpoint, Inc.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,8 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
 
+import io.airlift.units.Duration;
 import org.apache.bval.jsr.ApacheValidationProvider;
 import org.testng.annotations.Test;
 
@@ -23,46 +26,36 @@ import javax.validation.Validator;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
-import static io.airlift.units.ConstraintValidatorAssert.assertThat;
-import static io.airlift.units.DataSize.Unit.GIGABYTE;
-import static io.airlift.units.DataSize.Unit.KILOBYTE;
-import static io.airlift.units.DataSize.Unit.MEGABYTE;
+import static io.airlift.unitsvalidation.ConstraintValidatorAssert.assertThat;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertTrue;
 
-public class TestDataSizeValidator
+public class TestDurationValidator
 {
     private static final Validator VALIDATOR = Validation.byProvider(ApacheValidationProvider.class).configure().buildValidatorFactory().getValidator();
 
     @Test
-    public void testMaxDataSizeValidator()
+    public void testMaxDurationValidator()
     {
-        MaxDataSizeValidator maxValidator = new MaxDataSizeValidator();
-        maxValidator.initialize(new MockMaxDataSize(new DataSize(8, MEGABYTE)));
+        MaxDurationValidator maxValidator = new MaxDurationValidator();
+        maxValidator.initialize(new MockMaxDuration(new Duration(5, TimeUnit.SECONDS)));
 
-        assertThat(maxValidator).isValidFor(new DataSize(0, KILOBYTE));
-        assertThat(maxValidator).isValidFor(new DataSize(5, KILOBYTE));
-        assertThat(maxValidator).isValidFor(new DataSize(5005, KILOBYTE));
-        assertThat(maxValidator).isValidFor(new DataSize(5, MEGABYTE));
-        assertThat(maxValidator).isValidFor(new DataSize(8, MEGABYTE));
-        assertThat(maxValidator).isValidFor(new DataSize(8192, KILOBYTE));
-        assertThat(maxValidator).isInvalidFor(new DataSize(9, MEGABYTE));
-        assertThat(maxValidator).isInvalidFor(new DataSize(1, GIGABYTE));
+        assertThat(maxValidator).isValidFor(new Duration(0, TimeUnit.SECONDS));
+        assertThat(maxValidator).isValidFor(new Duration(5, TimeUnit.SECONDS));
+        assertThat(maxValidator).isInvalidFor(new Duration(6, TimeUnit.SECONDS));
     }
 
     @Test
-    public void testMinDataSizeValidator()
+    public void testMinDurationValidator()
     {
-        MinDataSizeValidator minValidator = new MinDataSizeValidator();
-        minValidator.initialize(new MockMinDataSize(new DataSize(4, MEGABYTE)));
+        MinDurationValidator minValidator = new MinDurationValidator();
+        minValidator.initialize(new MockMinDuration(new Duration(5, TimeUnit.SECONDS)));
 
-        assertThat(minValidator).isValidFor(new DataSize(4, MEGABYTE));
-        assertThat(minValidator).isValidFor(new DataSize(4096, KILOBYTE));
-        assertThat(minValidator).isValidFor(new DataSize(5, MEGABYTE));
-        assertThat(minValidator).isInvalidFor(new DataSize(0, GIGABYTE));
-        assertThat(minValidator).isInvalidFor(new DataSize(1, MEGABYTE));
+        assertThat(minValidator).isValidFor(new Duration(5, TimeUnit.SECONDS));
+        assertThat(minValidator).isValidFor(new Duration(6, TimeUnit.SECONDS));
+        assertThat(minValidator).isInvalidFor(new Duration(0, TimeUnit.SECONDS));
     }
 
     @Test
@@ -83,16 +76,16 @@ public class TestDataSizeValidator
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new MinAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
-                .hasMessage("No compliant io.airlift.units.MinDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+                .hasMessage("No compliant io.airlift.unitsvalidation.MinDuration ConstraintValidator found for annotated element of type java.util.Optional<T>");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
     }
 
     @Test
@@ -101,147 +94,147 @@ public class TestDataSizeValidator
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new MaxAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
-                .hasMessage("No compliant io.airlift.units.MaxDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+                .hasMessage("No compliant io.airlift.unitsvalidation.MaxDuration ConstraintValidator found for annotated element of type java.util.Optional<T>");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
-                .hasMessage("java.lang.IllegalArgumentException: size is not a valid data size string: broken");
+                .hasMessage("java.lang.IllegalArgumentException: duration is not a valid data duration string: broken");
     }
 
     @Test
     public void testPassesValidation()
     {
-        assertTrue(VALIDATOR.validate(new ConstrainedDataSize(new DataSize(7, MEGABYTE))).isEmpty());
+        assertThat(VALIDATOR.validate(new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS)))).isEmpty();
 
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(7, MEGABYTE))))).isEmpty();
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(7, TimeUnit.SECONDS))))).isEmpty();
 
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.empty()))).isEmpty();
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.empty()))).isEmpty();
 
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(null))).isEmpty();
+        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(null))).isEmpty();
     }
 
     @Test
-    public void testFailsMaxDataSizeConstraint()
+    public void testFailsMaxDurationConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(11, MEGABYTE)));
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS)));
         assertThat(violations).hasSize(2);
         assertThat(violations)
                 .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDataSize.class::isInstance);
+                .allMatch(MaxDuration.class::isInstance);
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
+                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))));
+        violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(11, TimeUnit.SECONDS))));
         assertThat(violations).hasSize(2);
         assertThat(violations)
                 .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDataSize.class::isInstance);
+                .allMatch(MaxDuration.class::isInstance);
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMax", "constrainedByMinAndMax");
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
+                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
     }
 
     @Test
-    public void testFailsMinDataSizeConstraint()
+    public void testFailsMinDurationConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(1, MEGABYTE)));
+        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS)));
         assertThat(violations).hasSize(2);
         assertThat(violations)
                 .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDataSize.class::isInstance);
+                .allMatch(MinDuration.class::isInstance);
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
+                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))));
+        violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(1, TimeUnit.SECONDS))));
         assertThat(violations).hasSize(2);
         assertThat(violations)
                 .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDataSize.class::isInstance);
+                .allMatch(MinDuration.class::isInstance);
         assertThat(violations)
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .containsOnly("constrainedByMin", "constrainedByMinAndMax");
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
+                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public static class ConstrainedDataSize
+    public static class ConstrainedDuration
     {
-        private final DataSize dataSize;
+        private final Duration duration;
 
-        public ConstrainedDataSize(DataSize dataSize)
+        public ConstrainedDuration(Duration duration)
         {
-            this.dataSize = dataSize;
+            this.duration = duration;
         }
 
-        @MinDataSize("5MB")
-        public DataSize getConstrainedByMin()
+        @MinDuration("5s")
+        public Duration getConstrainedByMin()
         {
-            return dataSize;
+            return duration;
         }
 
-        @MaxDataSize("10MB")
-        public DataSize getConstrainedByMax()
+        @MaxDuration("10s")
+        public Duration getConstrainedByMax()
         {
-            return dataSize;
+            return duration;
         }
 
-        @MinDataSize("5000kB")
-        @MaxDataSize("10000kB")
-        public DataSize getConstrainedByMinAndMax()
+        @MinDuration("5000ms")
+        @MaxDuration("10000ms")
+        public Duration getConstrainedByMinAndMax()
         {
-            return dataSize;
+            return duration;
         }
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public static class ConstrainedOptionalDataSize
+    public static class ConstrainedOptionalDuration
     {
-        private final Optional<DataSize> dataSize;
+        private final Optional<Duration> duration;
 
-        public ConstrainedOptionalDataSize(Optional<DataSize> dataSize)
+        public ConstrainedOptionalDuration(Optional<Duration> duration)
         {
-            this.dataSize = dataSize;
+            this.duration = duration;
         }
 
-        public Optional<@MinDataSize("5MB") DataSize> getConstrainedByMin()
+        public Optional<@MinDuration("5s") Duration> getConstrainedByMin()
         {
-            return dataSize;
+            return duration;
         }
 
-        public Optional<@MaxDataSize("10MB") DataSize> getConstrainedByMax()
+        public Optional<@MaxDuration("10s") Duration> getConstrainedByMax()
         {
-            return dataSize;
+            return duration;
         }
 
-        public Optional<@MinDataSize("5000kB") @MaxDataSize("10000kB") DataSize> getConstrainedByMinAndMax()
+        public Optional<@MinDuration("5000ms") @MaxDuration("10000ms") Duration> getConstrainedByMinAndMax()
         {
-            return dataSize;
+            return duration;
         }
     }
 
     public static class NullMinAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MinDataSize("1MB")
-        public DataSize getConstrainedByMin()
+        @MinDuration("1s")
+        public Duration getConstrainedByMin()
         {
             return null;
         }
@@ -250,8 +243,8 @@ public class TestDataSizeValidator
     public static class NullMaxAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MaxDataSize("1MB")
-        public DataSize getConstrainedByMin()
+        @MaxDuration("1s")
+        public Duration getConstrainedByMin()
         {
             return null;
         }
@@ -260,28 +253,28 @@ public class TestDataSizeValidator
     public static class BrokenMinAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MinDataSize("broken")
-        public DataSize getConstrainedByMin()
+        @MinDuration("broken")
+        public Duration getConstrainedByMin()
         {
-            return new DataSize(32, KILOBYTE);
+            return new Duration(10, TimeUnit.SECONDS);
         }
     }
 
     public static class BrokenMaxAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MinDataSize("broken")
-        public DataSize getConstrainedByMin()
+        @MinDuration("broken")
+        public Duration getConstrainedByMin()
         {
-            return new DataSize(32, KILOBYTE);
+            return new Duration(10, TimeUnit.SECONDS);
         }
     }
 
     public static class MinAnnotationOnOptional
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MinDataSize("1MB")
-        public Optional<DataSize> getConstrainedByMin()
+        @MinDuration("1s")
+        public Optional<Duration> getConstrainedByMin()
         {
             return Optional.empty();
         }
@@ -290,8 +283,8 @@ public class TestDataSizeValidator
     public static class MaxAnnotationOnOptional
     {
         @SuppressWarnings("UnusedDeclaration")
-        @MaxDataSize("1MB")
-        public Optional<DataSize> getConstrainedByMin()
+        @MaxDuration("1s")
+        public Optional<Duration> getConstrainedByMin()
         {
             return Optional.empty();
         }
@@ -300,7 +293,7 @@ public class TestDataSizeValidator
     public static class BrokenOptionalMinAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        public Optional<@MinDataSize("broken") DataSize> getConstrainedByMin()
+        public Optional<@MinDuration("broken") Duration> getConstrainedByMin()
         {
             return Optional.empty();
         }
@@ -309,7 +302,7 @@ public class TestDataSizeValidator
     public static class BrokenOptionalMaxAnnotation
     {
         @SuppressWarnings("UnusedDeclaration")
-        public Optional<@MaxDataSize("broken") DataSize> getConstrainedByMax()
+        public Optional<@MaxDuration("broken") Duration> getConstrainedByMax()
         {
             return Optional.empty();
         }

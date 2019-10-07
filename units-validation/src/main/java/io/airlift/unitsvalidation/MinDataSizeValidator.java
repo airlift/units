@@ -1,6 +1,4 @@
 /*
- * Copyright 2010 Proofpoint, Inc.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,31 +11,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
+
+import io.airlift.units.DataSize;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-public class MaxDurationValidator
-        implements ConstraintValidator<MaxDuration, Duration>
+public class MinDataSizeValidator
+        implements ConstraintValidator<MinDataSize, DataSize>
 {
-    private Duration max;
+    private DataSize min;
 
     @Override
-    public void initialize(MaxDuration duration)
+    public void initialize(MinDataSize dataSize)
     {
-        this.max = Duration.valueOf(duration.value());
+        this.min = DataSize.valueOf(dataSize.value());
     }
 
     @Override
-    public boolean isValid(Duration duration, ConstraintValidatorContext context)
+    public boolean isValid(DataSize dataSize, ConstraintValidatorContext context)
     {
-        return duration == null || duration.compareTo(max) <= 0;
+        return (dataSize == null) || (dataSize.compareTo(min) >= 0);
     }
 
     @Override
     public String toString()
     {
-        return "max:" + max;
+        return "min:" + min;
     }
 }

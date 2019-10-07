@@ -11,31 +11,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
+
+import io.airlift.units.DataSize;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-public class MinDataSizeValidator
-        implements ConstraintValidator<MinDataSize, DataSize>
+public class MaxDataSizeValidator
+        implements ConstraintValidator<MaxDataSize, DataSize>
 {
-    private DataSize min;
+    private DataSize max;
 
     @Override
-    public void initialize(MinDataSize dataSize)
+    public void initialize(MaxDataSize dataSize)
     {
-        this.min = DataSize.valueOf(dataSize.value());
+        this.max = DataSize.valueOf(dataSize.value());
     }
 
     @Override
     public boolean isValid(DataSize dataSize, ConstraintValidatorContext context)
     {
-        return (dataSize == null) || (dataSize.compareTo(min) >= 0);
+        return (dataSize == null) || (dataSize.compareTo(max) <= 0);
     }
 
     @Override
     public String toString()
     {
-        return "min:" + min;
+        return "max:" + max;
     }
 }

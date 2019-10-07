@@ -1,6 +1,4 @@
 /*
- * Copyright 2010 Proofpoint, Inc.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,27 +11,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
+
+import io.airlift.units.DataSize;
 
 import javax.validation.Payload;
 
 import java.lang.annotation.Annotation;
 
-@SuppressWarnings("ClassExplicitlyAnnotation")
-class MockMaxDuration
-        implements MaxDuration
-{
-    private final Duration duration;
+import static java.util.Objects.requireNonNull;
 
-    public MockMaxDuration(Duration duration)
+@SuppressWarnings("ClassExplicitlyAnnotation")
+class MockMinDataSize
+        implements MinDataSize
+{
+    private final DataSize dataSize;
+
+    public MockMinDataSize(DataSize dataSize)
     {
-        this.duration = duration;
+        this.dataSize = requireNonNull(dataSize, "dataSize is null");
     }
 
     @Override
     public String value()
     {
-        return duration.toString();
+        return dataSize.toString();
     }
 
     @Override
@@ -57,6 +59,6 @@ class MockMaxDuration
     @Override
     public Class<? extends Annotation> annotationType()
     {
-        return MaxDuration.class;
+        return MinDataSize.class;
     }
 }

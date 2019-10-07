@@ -1,4 +1,6 @@
 /*
+ * Copyright 2010 Proofpoint, Inc.
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -11,29 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
+
+import io.airlift.units.Duration;
 
 import javax.validation.Payload;
 
 import java.lang.annotation.Annotation;
 
-import static java.util.Objects.requireNonNull;
-
 @SuppressWarnings("ClassExplicitlyAnnotation")
-class MockMaxDataSize
-        implements MaxDataSize
+class MockMaxDuration
+        implements MaxDuration
 {
-    private final DataSize dataSize;
+    private final Duration duration;
 
-    public MockMaxDataSize(DataSize dataSize)
+    public MockMaxDuration(Duration duration)
     {
-        this.dataSize = requireNonNull(dataSize, "dataSize is null");
+        this.duration = duration;
     }
 
     @Override
     public String value()
     {
-        return dataSize.toString();
+        return duration.toString();
     }
 
     @Override

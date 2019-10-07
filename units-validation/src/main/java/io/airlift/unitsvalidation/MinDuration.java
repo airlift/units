@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -38,7 +38,7 @@ public @interface MinDuration
 {
     String value();
 
-    String message() default "{io.airlift.units.MinDuration.message}";
+    String message() default "{io.airlift.unitsvalidation.MinDuration.message}";
 
     Class<?>[] groups() default {};
 

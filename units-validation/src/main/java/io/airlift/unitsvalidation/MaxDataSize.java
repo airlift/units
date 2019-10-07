@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.airlift.units;
+package io.airlift.unitsvalidation;
 
 import javax.validation.Constraint;
 import javax.validation.Payload;
@@ -31,12 +31,12 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Target({METHOD, FIELD, ANNOTATION_TYPE, CONSTRUCTOR, PARAMETER, TYPE_USE})
 @Retention(RUNTIME)
 @Documented
-@Constraint(validatedBy = MinDataSizeValidator.class)
-public @interface MinDataSize
+@Constraint(validatedBy = MaxDataSizeValidator.class)
+public @interface MaxDataSize
 {
     String value();
 
-    String message() default "{io.airlift.units.MinDataSize.message}";
+    String message() default "{io.airlift.unitsvalidation.MaxDataSize.message}";
 
     Class<?>[] groups() default {};
 
