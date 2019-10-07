@@ -1,13 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>units</artifactId>
-    <version>1.4-SNAPSHOT</version>
-    <packaging>jar</packaging>
-
-    <name>units</name>
-    <description>Library for immutable human-friendly units</description>
-    <url>https://github.com/airlift/units</url>
 
     <parent>
         <groupId>io.airlift</groupId>
@@ -15,11 +8,13 @@
         <version>91</version>
     </parent>
 
-    <inceptionYear>2016</inceptionYear>
+    <artifactId>units-root</artifactId>
+    <version>1.4-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>units-root</name>
 
-    <properties>
-        <air.check.skip-extended>true</air.check.skip-extended>
-    </properties>
+    <url>https://github.com/airlift/units</url>
+    <inceptionYear>2016</inceptionYear>
 
     <organization>
         <name>Airlift</name>
@@ -33,56 +28,35 @@
         </license>
     </licenses>
 
-    <dependencies>
-        <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-            <optional>true</optional>
-        </dependency>
+    <properties>
+        <air.check.skip-extended>true</air.check.skip-extended>
+    </properties>
 
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <optional>true</optional>
-        </dependency>
+    <modules>
+        <module>units</module>
+        <module>units-units</module>
+        <module>units-validation</module>
+    </modules>
 
-        <!-- for testing -->
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>units</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>units-units</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>testing</artifactId>
-            <version>0.134</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>json</artifactId>
-            <version>0.134</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.bval</groupId>
-            <artifactId>bval-jsr</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+            <dependency>
+                <groupId>io.airlift</groupId>
+                <artifactId>units-validation</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 </project>
