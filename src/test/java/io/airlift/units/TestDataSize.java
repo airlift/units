@@ -50,6 +50,16 @@ public class TestDataSize
         assertEquals(succinctDataSize(5 * 1024, KILOBYTE), new DataSize(5, MEGABYTE));
     }
 
+    @Test
+    public void testFullPrecisionString()
+    {
+        DataSize oneByte = DataSize.ofBytes(1);
+        assertEquals(oneByte.toString(), oneByte.toFullPrecisionString(), "exact values match toString()");
+        for (DataSize.Unit u : DataSize.Unit.values()) {
+            assertEquals(1L, DataSize.valueOf(oneByte.convertTo(u).toFullPrecisionString()).toBytes());
+        }
+    }
+
     @Test(dataProvider = "conversions")
     public void testConversions(DataSize.Unit unit, DataSize.Unit toUnit, double factor)
     {
@@ -250,6 +260,11 @@ public class TestDataSize
         assertJsonRoundTrip(new DataSize(1.234, GIGABYTE));
         assertJsonRoundTrip(new DataSize(1.234, TERABYTE));
         assertJsonRoundTrip(new DataSize(1.234, PETABYTE));
+
+        for (DataSize.Unit u : DataSize.Unit.values()) {
+            assertJsonRoundTrip(DataSize.ofBytes(1L).convertTo(u));
+            assertJsonRoundTrip(new DataSize(1.0, u).convertTo(BYTE));
+        }
     }
 
     private static void assertJsonRoundTrip(DataSize dataSize)
@@ -260,6 +275,8 @@ public class TestDataSize
 
         assertThat(dataSizeCopy.getValue(BYTE))
                 .isCloseTo(dataSize.getValue(BYTE), withPercentage(1));
+
+        assertEquals(dataSize.toBytes(), dataSizeCopy.toBytes(), "byte value equivalence");
     }
 
     @DataProvider(name = "parseableValues", parallel = true)
@@ -291,7 +308,20 @@ public class TestDataSize
                 new Object[] {"1234.567MB", 1234.567, MEGABYTE},
                 new Object[] {"1234.567GB", 1234.567, GIGABYTE},
                 new Object[] {"1234.567TB", 1234.567, TERABYTE},
-                new Object[] {"1234.567PB", 1234.567, PETABYTE}
+                new Object[] {"1234.567PB", 1234.567, PETABYTE},
+                // engineering string
+                new Object[] {"0.1234e+4B", 1234, BYTE},
+                new Object[] {"1.234e3 kB", 1234, KILOBYTE},
+                new Object[] {"12.34E+2MB", 1234, MEGABYTE},
+                new Object[] {"123.4E+1 GB", 1234, GIGABYTE},
+                new Object[] {"1234.0TB", 1234, TERABYTE},
+                new Object[] {"12340e-1 PB", 1234, PETABYTE},
+                new Object[] {"1234567e-3 B", 1234.567, BYTE},
+                new Object[] {"123456.7E-2kB", 1234.567, KILOBYTE},
+                new Object[] {"0.001234567E+6 MB", 1234.567, MEGABYTE},
+                new Object[] {"0.1234567e4GB", 1234.567, GIGABYTE},
+                new Object[] {"1.234567e+3TB", 1234.567, TERABYTE},
+                new Object[] {"12345670000E-7 PB", 1234.567, PETABYTE}
         };
     }
 

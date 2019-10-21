@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -30,7 +31,7 @@ import static java.util.Objects.requireNonNull;
 public class DataSize
         implements Comparable<DataSize>
 {
-    private static final Pattern PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
+    private static final Pattern PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
     // We iterate over the DATASIZE_UNITS constant in convertToMostSuccinctDataSize()
     // instead of Unit.values() as the latter results in non-trivial amount of memory
@@ -38,6 +39,14 @@ public class DataSize
     // call allocates a new array at each call.
     private static final Unit[] DATASIZE_UNITS = Unit.values();
 
+    public static DataSize ofBytes(long bytes)
+    {
+        return new DataSize((double) bytes, Unit.BYTE);
+    }
+
+    /**
+     * Prefer {@link DataSize#ofBytes(long)} when conversion to the most 'succinct' unit is not necessary or desirable
+     */
     public static DataSize succinctBytes(long bytes)
     {
         return succinctDataSize(bytes, Unit.BYTE);
@@ -86,7 +95,7 @@ public class DataSize
 
     public long roundTo(Unit unit)
     {
-        double rounded = Math.floor(getValue(unit) + 0.5d);
+        double rounded = floor(getValue(unit) + 0.5d);
         checkArgument(rounded <= Long.MAX_VALUE,
                 "size is too large to be represented in requested unit as a long");
         return (long) rounded;
@@ -112,13 +121,32 @@ public class DataSize
         return convertTo(unitToUse);
     }
 
+    private Optional<String> stringValueIfExact()
+    {
+        double floorValue = floor(value);
+        //noinspection FloatingPointEquality
+        if (floorValue == value) {
+            return Optional.of(((long) floorValue) + unit.getUnitString());
+        }
+        return Optional.empty();
+    }
+
     @JsonValue
+    public String toFullPrecisionString()
+    {
+        Optional<String> exact = stringValueIfExact();
+        if (exact.isPresent()) {
+            return exact.get();
+        }
+        return Double.toString(value) + unit.getUnitString();
+    }
+
     @Override
     public String toString()
     {
-        //noinspection FloatingPointEquality
-        if (floor(value) == value) {
-            return (long) (floor(value)) + unit.getUnitString();
+        Optional<String> exact = stringValueIfExact();
+        if (exact.isPresent()) {
+            return exact.get();
         }
 
         return String.format(Locale.ENGLISH, "%.2f%s", value, unit.getUnitString());
