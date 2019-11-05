@@ -32,8 +32,7 @@ import static io.airlift.units.DataSize.Unit.TERABYTE;
 import static io.airlift.units.DataSize.succinctBytes;
 import static io.airlift.units.DataSize.succinctDataSize;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.offset;
-import static org.assertj.core.data.Percentage.withPercentage;
+import static org.assertj.core.api.Assertions.within;
 import static org.testng.Assert.assertEquals;
 
 public class TestDataSize
@@ -41,19 +40,51 @@ public class TestDataSize
     @Test
     public void testSuccinctFactories()
     {
-        assertEquals(succinctBytes(123), new DataSize(123, BYTE));
-        assertEquals(succinctBytes((long) (5.5 * 1024)), new DataSize(5.5, KILOBYTE));
-        assertEquals(succinctBytes(5 * 1024 * 1024), new DataSize(5, MEGABYTE));
+        assertEquals(succinctBytes(123), DataSize.ofBytes(123));
+        assertEquals(succinctBytes(123).getUnit(), BYTE);
 
-        assertEquals(succinctDataSize(123, BYTE), new DataSize(123, BYTE));
+        DataSize fiveMiBi = DataSize.ofBytes(5 * 1024 * 1024);
+        assertEquals(succinctBytes(fiveMiBi.toBytes()), fiveMiBi);
+        assertEquals(succinctBytes(fiveMiBi.toBytes()).getUnit(), MEGABYTE);
+    }
+
+    @Test
+    public void testDeprecatedSuccinctFactories()
+    {
+        assertEquals(succinctDataSize(123, BYTE), DataSize.ofBytes(123));
+        assertEquals(succinctDataSize(123, BYTE).getUnit(), BYTE);
+
         assertEquals(succinctDataSize((long) (5.5 * 1024), BYTE), new DataSize(5.5, KILOBYTE));
-        assertEquals(succinctDataSize(5 * 1024, KILOBYTE), new DataSize(5, MEGABYTE));
+        assertEquals(succinctDataSize((long) (5.5 * 1024), BYTE).getUnit(), KILOBYTE);
+
+        assertEquals(succinctDataSize(5 * 1024, KILOBYTE), DataSize.of(5, MEGABYTE));
+        assertEquals(succinctDataSize(5 * 1024, KILOBYTE).getUnit(), MEGABYTE);
+    }
+
+    @Test
+    public void testToBytesValueString()
+    {
+        DataSize oneByte = DataSize.ofBytes(1);
+        assertEquals(oneByte.toString(), oneByte.toBytesValueString(), "exact values match toString()");
+        assertEquals(oneByte.toString(), "1B");
+
+        for (DataSize.Unit unit : DataSize.Unit.values()) {
+            DataSize oneInUnit = DataSize.of(1, unit);
+            assertEquals(oneInUnit.toBytesValueString(), unit.getFactor() + "B");
+            assertEquals(DataSize.valueOf(oneInUnit.toBytesValueString()), oneInUnit);
+        }
+
+        assertEquals(DataSize.of(1, KILOBYTE).toBytesValueString(), "1024B");
+        assertEquals(DataSize.of(2, MEGABYTE).toBytesValueString(), "2097152B");
+        assertEquals(DataSize.of(3, GIGABYTE).toBytesValueString(), "3221225472B");
+        assertEquals(DataSize.of(4, TERABYTE).toBytesValueString(), "4398046511104B");
+        assertEquals(DataSize.of(5, PETABYTE).toBytesValueString(), "5629499534213120B");
     }
 
     @Test(dataProvider = "conversions")
     public void testConversions(DataSize.Unit unit, DataSize.Unit toUnit, double factor)
     {
-        DataSize size = new DataSize(1, unit).convertTo(toUnit);
+        DataSize size = DataSize.of(1, unit).to(toUnit);
         assertEquals(size.getUnit(), toUnit);
         assertEquals(size.getValue(), factor);
 
@@ -64,14 +95,14 @@ public class TestDataSize
     public void testConvertToMostSuccinctDataSize(DataSize.Unit unit, DataSize.Unit toUnit, double factor)
     {
         DataSize size = new DataSize(factor, toUnit);
-        DataSize actual = size.convertToMostSuccinctDataSize();
-        assertThat(actual).isEqualTo(new DataSize(1, unit));
-        assertThat(actual.getValue(unit)).isCloseTo(1.0, offset(0.001));
+        DataSize actual = size.succinct();
+        assertThat(actual).isEqualTo(DataSize.of(1, unit));
+        assertThat(actual.getValue(unit)).isCloseTo(1.0, within(0.001));
         assertThat(actual.getUnit()).isEqualTo(unit);
     }
 
     @Test
-    public void testEquivalence()
+    public void testValueEquivalence()
     {
         comparisonTester()
                 .addLesserGroup(group(0))
@@ -81,7 +112,30 @@ public class TestDataSize
                 .check();
     }
 
-    private static Iterable<DataSize> group(double bytes)
+    private static Iterable<DataSize> group(long bytes)
+    {
+        return ImmutableList.of(
+                DataSize.ofBytes(bytes),
+                DataSize.ofBytes(bytes).convertTo(KILOBYTE),
+                DataSize.ofBytes(bytes).convertTo(MEGABYTE),
+                DataSize.ofBytes(bytes).convertTo(GIGABYTE),
+                DataSize.ofBytes(bytes).convertTo(TERABYTE),
+                DataSize.ofBytes(bytes).convertTo(PETABYTE)
+        );
+    }
+
+    @Test
+    public void testDeprecatedDoubleValueEquivalence()
+    {
+        comparisonTester()
+                .addLesserGroup(deprecatedDoubleValueGroup(0))
+                .addGreaterGroup(deprecatedDoubleValueGroup(1))
+                .addGreaterGroup(deprecatedDoubleValueGroup(123352))
+                .addGreaterGroup(deprecatedDoubleValueGroup(Long.MAX_VALUE))
+                .check();
+    }
+
+    private static Iterable<DataSize> deprecatedDoubleValueGroup(double bytes)
     {
         return ImmutableList.of(
                 new DataSize(bytes, BYTE),
@@ -120,7 +174,16 @@ public class TestDataSize
         DataSize size = DataSize.valueOf(string);
 
         assertEquals(size.getUnit(), expectedUnit);
-        assertEquals(size.getValue(), expectedValue);
+        assertThat(size.getValue()).isCloseTo(expectedValue, within(0.001));
+    }
+
+    @Test
+    public void testValueOfDecimalAndLongHandling()
+    {
+        //  If parsed as double, this results in only 2^53 not (2^53) + 1
+        DataSize tooLargeAsDouble = DataSize.ofBytes((1L << 53) + 1);
+        assertEquals(DataSize.valueOf(Long.toString(tooLargeAsDouble.toBytes()) + "B"), tooLargeAsDouble, "should parse as long and not double");
+        assertEquals(DataSize.valueOf(Long.toString(tooLargeAsDouble.toBytes()) + ".0B"), DataSize.ofBytes(1L << 53), "should parse as double");
     }
 
     @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "size is null")
@@ -148,29 +211,29 @@ public class TestDataSize
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is negative")
-    public void testConstructorRejectsNegativeSize()
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is negative: -1.0")
+    public void testDeprecatedConstructorRejectsNegativeSize()
     {
-        new DataSize(-1, BYTE);
+        new DataSize(-1.0, BYTE);
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is infinite")
-    public void testConstructorRejectsInfiniteSize()
+    public void testDeprecatedConstructorRejectsInfiniteSize()
     {
         new DataSize(Double.POSITIVE_INFINITY, BYTE);
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is infinite")
-    public void testConstructorRejectsInfiniteSize2()
+    public void testDeprecatedConstructorRejectsInfiniteSize2()
     {
         new DataSize(Double.NEGATIVE_INFINITY, BYTE);
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a number")
-    public void testConstructorRejectsNaN()
+    public void testDeprecatedConstructorRejectsNaN()
     {
         new DataSize(Double.NaN, BYTE);
     }
@@ -182,56 +245,72 @@ public class TestDataSize
         new DataSize(1, null);
     }
 
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is negative: -11")
+    public void testOfRejectsNegativeSize()
+    {
+        DataSize.of(-11, MEGABYTE);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is too large to be represented in bytes: 9223372036854775807MB")
+    public void testOfDetectsOverflow()
+    {
+        DataSize.of(Long.MAX_VALUE, MEGABYTE);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "bytes is negative")
+    public void testOfBytesRejectsNegativeSize()
+    {
+        DataSize.ofBytes(-1);
+    }
+
+    @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "unit is null")
+    public void testOfRejectsNullUnit()
+    {
+        DataSize.of(1, null);
+    }
+
     @Test
     public void testToBytes()
     {
-        assertEquals(new DataSize(0, BYTE).toBytes(), 0);
-        assertEquals(new DataSize(0, MEGABYTE).toBytes(), 0);
-        assertEquals(new DataSize(1, BYTE).toBytes(), 1);
-        assertEquals(new DataSize(1, KILOBYTE).toBytes(), 1024);
-        assertEquals(new DataSize(42, MEGABYTE).toBytes(), 42L * 1024 * 1024);
-        assertEquals(new DataSize(0.037, KILOBYTE).toBytes(), 37);
-        assertEquals(new DataSize(1, TERABYTE).toBytes(), 1024L * 1024 * 1024 * 1024);
-        assertEquals(new DataSize(1, PETABYTE).toBytes(), 1024L * 1024 * 1024 * 1024 * 1024);
-        assertEquals(new DataSize(1024, PETABYTE).toBytes(), 1024L * 1024 * 1024 * 1024 * 1024 * 1024);
-        assertEquals(new DataSize(8191, PETABYTE).toBytes(), 8191L * 1024 * 1024 * 1024 * 1024 * 1024);
-        assertEquals(new DataSize(Long.MAX_VALUE, BYTE).toBytes(), Long.MAX_VALUE);
+        assertEquals(DataSize.of(0, BYTE).toBytes(), 0);
+        assertEquals(DataSize.of(0, MEGABYTE).toBytes(), 0);
+        assertEquals(DataSize.of(1, BYTE).toBytes(), 1);
+        assertEquals(DataSize.of(1, KILOBYTE).toBytes(), 1024);
+        assertEquals(DataSize.of(42, MEGABYTE).toBytes(), 42L * 1024 * 1024);
+        assertEquals(DataSize.of(1, TERABYTE).toBytes(), 1024L * 1024 * 1024 * 1024);
+        assertEquals(DataSize.of(1, PETABYTE).toBytes(), 1024L * 1024 * 1024 * 1024 * 1024);
+        assertEquals(DataSize.of(1024, PETABYTE).toBytes(), 1024L * 1024 * 1024 * 1024 * 1024 * 1024);
+        assertEquals(DataSize.of(8191, PETABYTE).toBytes(), 8191L * 1024 * 1024 * 1024 * 1024 * 1024);
+        assertEquals(DataSize.of(Long.MAX_VALUE, BYTE).toBytes(), Long.MAX_VALUE);
+    }
+
+    @Test
+    public void testDeprecatedToBytes()
+    {
+        assertEquals(new DataSize(37.0 / 1024, KILOBYTE).toBytes(), 37);
         assertEquals(new DataSize(Long.MAX_VALUE / 1024.0, KILOBYTE).toBytes(), Long.MAX_VALUE);
-    }
-
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "size is too large .*")
-    public void testToBytesTooLarge()
-    {
-        new DataSize(Long.MAX_VALUE + 1024.0001, BYTE).toBytes(); // smallest value that overflows
-    }
-
-    @Test(expectedExceptions = IllegalStateException.class, expectedExceptionsMessageRegExp = "size is too large .*")
-    public void testToBytesTooLarge2()
-    {
-        new DataSize(9000, PETABYTE).toBytes();
     }
 
     @Test
     public void testRoundTo()
     {
-        assertEquals(new DataSize(0, BYTE).roundTo(BYTE), 0);
+        assertEquals(DataSize.ofBytes(0).roundTo(BYTE), 0);
         assertEquals(new DataSize(0.5, BYTE).roundTo(BYTE), 1);
         assertEquals(new DataSize((42 * 1024) + 511, BYTE).roundTo(KILOBYTE), 42);
         assertEquals(new DataSize((42 * 1024) + 512, BYTE).roundTo(KILOBYTE), 43);
         assertEquals(new DataSize(513, TERABYTE).roundTo(PETABYTE), 1);
-        assertEquals(new DataSize(9000L * 1024 * 1024 * 1024 * 1024, KILOBYTE).roundTo(PETABYTE), 9000);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is too large .*")
-    public void testRoundToTooLarge()
+    public void testSizeTooLarge()
     {
-        new DataSize(Long.MAX_VALUE + 1024.0001, BYTE).roundTo(BYTE);
+        new DataSize(Long.MAX_VALUE + 1024.0001, BYTE);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is too large .*")
-    public void testRoundToTooLarge2()
+    public void testSizeTooLargeInStaticOfMethod()
     {
-        new DataSize(9000, PETABYTE).roundTo(BYTE);
+        DataSize.of(9000, PETABYTE);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is too large .*")
@@ -242,14 +321,25 @@ public class TestDataSize
 
     @Test
     public void testJsonRoundTrip()
-            throws Exception
     {
-        assertJsonRoundTrip(new DataSize(1.234, BYTE));
+        assertJsonRoundTrip(DataSize.ofBytes(1L));
         assertJsonRoundTrip(new DataSize(1.234, KILOBYTE));
         assertJsonRoundTrip(new DataSize(1.234, MEGABYTE));
         assertJsonRoundTrip(new DataSize(1.234, GIGABYTE));
         assertJsonRoundTrip(new DataSize(1.234, TERABYTE));
         assertJsonRoundTrip(new DataSize(1.234, PETABYTE));
+
+        assertJsonRoundTrip(DataSize.ofBytes(Long.MAX_VALUE));
+
+        // Arbitrary assortment of values other than 1, primes and multiples of 2 and 10
+        long[] sizes = new long[] { 1, 2, 3, 5, 7, 8, 11, 16, 100 };
+
+        for (DataSize.Unit unit : DataSize.Unit.values()) {
+            for (long size : sizes) {
+                assertJsonRoundTrip(DataSize.ofBytes(size).convertTo(unit));
+                assertJsonRoundTrip(DataSize.of(size, unit));
+            }
+        }
     }
 
     private static void assertJsonRoundTrip(DataSize dataSize)
@@ -259,7 +349,11 @@ public class TestDataSize
         DataSize dataSizeCopy = dataSizeCodec.fromJson(json);
 
         assertThat(dataSizeCopy.getValue(BYTE))
-                .isCloseTo(dataSize.getValue(BYTE), withPercentage(1));
+                .isCloseTo(dataSize.getValue(BYTE), within(0.001));
+
+        assertEquals(dataSizeCopy.getUnit(), BYTE, "JSON serialization should always be in bytes");
+        assertEquals(dataSize.toBytes(), dataSizeCopy.toBytes(), "byte value equivalence");
+        assertEquals(dataSize, dataSizeCopy, "equals method equivalence");
     }
 
     @DataProvider(name = "parseableValues", parallel = true)
@@ -273,7 +367,6 @@ public class TestDataSize
                 new Object[] {"1234 GB", 1234, GIGABYTE},
                 new Object[] {"1234 TB", 1234, TERABYTE},
                 new Object[] {"1234 PB", 1234, PETABYTE},
-                new Object[] {"1234.567 B", 1234.567, BYTE},
                 new Object[] {"1234.567 kB", 1234.567, KILOBYTE},
                 new Object[] {"1234.567 MB", 1234.567, MEGABYTE},
                 new Object[] {"1234.567 GB", 1234.567, GIGABYTE},
@@ -286,7 +379,6 @@ public class TestDataSize
                 new Object[] {"1234GB", 1234, GIGABYTE},
                 new Object[] {"1234TB", 1234, TERABYTE},
                 new Object[] {"1234PB", 1234, PETABYTE},
-                new Object[] {"1234.567B", 1234.567, BYTE},
                 new Object[] {"1234.567kB", 1234.567, KILOBYTE},
                 new Object[] {"1234.567MB", 1234.567, MEGABYTE},
                 new Object[] {"1234.567GB", 1234.567, GIGABYTE},
@@ -305,7 +397,6 @@ public class TestDataSize
                 new Object[] {"1234GB", 1234, GIGABYTE},
                 new Object[] {"1234TB", 1234, TERABYTE},
                 new Object[] {"1234PB", 1234, PETABYTE},
-                new Object[] {"1234.57B", 1234.567, BYTE},
                 new Object[] {"1234.57kB", 1234.567, KILOBYTE},
                 new Object[] {"1234.57MB", 1234.567, MEGABYTE},
                 new Object[] {"1234.57GB", 1234.567, GIGABYTE},
