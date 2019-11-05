@@ -23,14 +23,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.airlift.units.Preconditions.checkArgument;
-import static io.airlift.units.Preconditions.checkState;
 import static java.lang.Math.floor;
+import static java.lang.Math.multiplyExact;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class DataSize
         implements Comparable<DataSize>
 {
-    private static final Pattern PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
+    private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
     // We iterate over the DATASIZE_UNITS constant in convertToMostSuccinctDataSize()
     // instead of Unit.values() as the latter results in non-trivial amount of memory
@@ -38,40 +39,92 @@ public class DataSize
     // call allocates a new array at each call.
     private static final Unit[] DATASIZE_UNITS = Unit.values();
 
+    /**
+     * Creates a {@link DataSize} instance with the provided quantity of the provided {@link Unit}. This
+     * value is immediately converted to bytes which might overflow.
+     *
+     * @param size The quantity of the supplied unit
+     * @param unit The unit to use as the default unit for the constructed instance and to convert the size to bytes
+     * @throws IllegalArgumentException If the provided size would overflow a long value when converting to bytes
+     */
+    public static DataSize of(long size, Unit unit)
+            throws IllegalArgumentException
+    {
+        requireNonNull(unit, "unit is null");
+        checkArgument(size >= 0, "size is negative: %s", size);
+        if (unit == Unit.BYTE) {
+            return new DataSize(size, unit);
+        }
+        try {
+            return new DataSize(multiplyExact(size, unit.getFactor()), unit);
+        }
+        catch (ArithmeticException e) {
+            throw new IllegalArgumentException(format("size is too large to be represented in bytes: %s%s", size, unit.getUnitString()));
+        }
+    }
+
+    public static DataSize ofBytes(long bytes)
+    {
+        return new DataSize(bytes, Unit.BYTE);
+    }
+
+    /**
+     * Prefer {@link DataSize#ofBytes(long)} when conversion to the most 'succinct' unit is not necessary or desirable
+     */
     public static DataSize succinctBytes(long bytes)
     {
-        return succinctDataSize(bytes, Unit.BYTE);
+        return ofBytes(bytes).succinct();
     }
 
+    /**
+     * Prefer {@link DataSize#of(long, Unit))} when conversion to the most 'succinct' unit is not necessary or desirable.
+     * Otherwise, use {@link DataSize#succinctBytes(long)} since it will not incur rounding and loss of precision.
+     * @deprecated use {@link DataSize#succinctBytes(long)} instead, double values are imprecise
+     */
+    @Deprecated
     public static DataSize succinctDataSize(double size, Unit unit)
     {
-        return new DataSize(size, unit).convertToMostSuccinctDataSize();
+        return new DataSize(roundDoubleSizeInUnitToLongBytes(size, unit), unit).succinct();
     }
 
-    private final double value;
+    private final long bytes;
     private final Unit unit;
 
+    /**
+     * Private constructor to avoid confusing usage sites with having to pass a number of bytes
+     * alongside non-bytes unit
+     * @param bytes The number of bytes, regardless of unit
+     * @param unit The preferred display unit of this value
+     */
+    private DataSize(long bytes, Unit unit)
+    {
+        this.unit = requireNonNull(unit, "unit is null");
+        checkArgument(bytes >= 0, "bytes is negative");
+        this.bytes = bytes;
+    }
+
+    /**
+     * @deprecated Use {@link DataSize#ofBytes} instead. The imprecise nature of using doubles for DataSize is deprecated for removal
+     */
+    @Deprecated
     public DataSize(double size, Unit unit)
     {
-        checkArgument(!Double.isInfinite(size), "size is infinite");
-        checkArgument(!Double.isNaN(size), "size is not a number");
-        checkArgument(size >= 0, "size is negative");
-        requireNonNull(unit, "unit is null");
-
-        this.value = size;
-        this.unit = unit;
+        this.unit = requireNonNull(unit, "unit is null");
+        this.bytes = roundDoubleSizeInUnitToLongBytes(size, unit);
     }
 
     public long toBytes()
     {
-        double bytes = getValue(Unit.BYTE);
-        checkState(bytes <= Long.MAX_VALUE, "size is too large to be represented in bytes as a long");
-        return (long) bytes;
+        return bytes;
     }
 
+    /**
+     * @deprecated Use {@link DataSize#toBytes()} instead to avoid floating point precision semantics
+     */
+    @Deprecated
     public double getValue()
     {
-        return value;
+        return getValue(this.unit);
     }
 
     public Unit getUnit()
@@ -79,49 +132,99 @@ public class DataSize
         return unit;
     }
 
+    /**
+     * @deprecated Use {@link DataSize#toBytes()} instead to avoid floating point precision semantics
+     */
+    @Deprecated
     public double getValue(Unit unit)
     {
-        return value * (this.unit.getFactor() * 1.0 / unit.getFactor());
+        requireNonNull(unit, "unit is null");
+        if (unit == Unit.BYTE) {
+            return (double) bytes;
+        }
+        return bytes * (1.0d / unit.getFactor());
     }
 
+    /**
+     * @deprecated Use {@link DataSize#toBytes()} instead. This method uses floating point semantics to compute the
+     * rounded value which can yield to unexpected loss of precision beyond the intended rounding
+     */
+    @Deprecated
     public long roundTo(Unit unit)
     {
-        double rounded = Math.floor(getValue(unit) + 0.5d);
+        requireNonNull(unit, "unit is null");
+        if (unit == Unit.BYTE) {
+            return bytes;
+        }
+        double rounded = floor(getValue(unit) + 0.5d);
         checkArgument(rounded <= Long.MAX_VALUE,
-                "size is too large to be represented in requested unit as a long");
+                "size is too large to be represented in requested unit as a long: %s%s", rounded, unit.getUnitString());
         return (long) rounded;
     }
 
-    public DataSize convertTo(Unit unit)
-    {
-        requireNonNull(unit, "unit is null");
-        return new DataSize(getValue(unit), unit);
-    }
-
-    public DataSize convertToMostSuccinctDataSize()
+    private Unit succinctUnit()
     {
         Unit unitToUse = Unit.BYTE;
         for (Unit unitToTest : DATASIZE_UNITS) {
-            if (getValue(unitToTest) >= 1.0) {
+            if (unitToTest.getFactor() <= bytes) {
                 unitToUse = unitToTest;
             }
             else {
                 break;
             }
         }
-        return convertTo(unitToUse);
+        return unitToUse;
+    }
+
+    /**
+     * @deprecated Use {@link DataSize#to(Unit)} instead. No conversion occurs when calling this method, only the unit
+     * used for the default string representation is changed. This has no effect on the unit used during JSON serialization
+     */
+    @Deprecated
+    public DataSize convertTo(Unit unit)
+    {
+        return to(unit);
+    }
+
+    public DataSize to(Unit unit)
+    {
+        return new DataSize(bytes, unit);
+    }
+
+    public DataSize succinct()
+    {
+        return to(succinctUnit());
+    }
+
+    /**
+     * @deprecated Use {@link DataSize#succinct()} instead. No conversion occurs when calling this method, only the unit
+     * used for the default string representation is changed. This has no effect on the unit used during JSON serialization
+     */
+    @Deprecated
+    public DataSize convertToMostSuccinctDataSize()
+    {
+        return succinct();
     }
 
     @JsonValue
+    public String toBytesValueString()
+    {
+        return Long.toString(bytes) + Unit.BYTE.getUnitString();
+    }
+
     @Override
     public String toString()
     {
-        //noinspection FloatingPointEquality
-        if (floor(value) == value) {
-            return (long) (floor(value)) + unit.getUnitString();
+        // Fast-path for exact byte values
+        if (this.unit == Unit.BYTE) {
+            return toBytesValueString();
         }
-
-        return String.format(Locale.ENGLISH, "%.2f%s", value, unit.getUnitString());
+        double unitValue = getValue();
+        //noinspection FloatingPointEquality
+        if (floor(unitValue) == unitValue) {
+            return Long.toString((long) unitValue) + unit.getUnitString();
+        }
+        return format(Locale.ENGLISH, "%.2f%s", unitValue, unit.getUnitString());
     }
 
     @JsonCreator
@@ -131,27 +234,35 @@ public class DataSize
         requireNonNull(size, "size is null");
         checkArgument(!size.isEmpty(), "size is empty");
 
-        Matcher matcher = PATTERN.matcher(size);
-        if (!matcher.matches()) {
+        Matcher longOrDouble = DECIMAL_WITH_UNIT_PATTERN.matcher(size);
+        if (!longOrDouble.matches()) {
             throw new IllegalArgumentException("size is not a valid data size string: " + size);
         }
-
-        double value = Double.parseDouble(matcher.group(1));
-        String unitString = matcher.group(2);
-
-        for (Unit unit : Unit.values()) {
-            if (unit.getUnitString().equals(unitString)) {
-                return new DataSize(value, unit);
-            }
+        Unit unit = Unit.fromUnitString(longOrDouble.group(2));
+        String number = longOrDouble.group(1);
+        if (number.indexOf('.') == -1) {
+            // Strings without decimals can avoid precision loss by parsing as long
+            return DataSize.of(Long.parseLong(number), unit);
         }
+        return new DataSize(roundDoubleSizeInUnitToLongBytes(Double.parseDouble(number), unit), unit);
+    }
 
-        throw new IllegalArgumentException("Unknown unit: " + unitString);
+    private static long roundDoubleSizeInUnitToLongBytes(double size, Unit unit)
+    {
+        checkArgument(!Double.isInfinite(size), "size is infinite");
+        checkArgument(!Double.isNaN(size), "size is not a number");
+        checkArgument(size >= 0, "size is negative: %s", size);
+        requireNonNull(unit, "unit is null");
+        double rounded = floor((size / (1.0d / unit.getFactor())) + 0.5d);
+        checkArgument(rounded <= Long.MAX_VALUE,
+                "size is too large to be represented in requested unit as a long: %s%s", size, unit.getUnitString());
+        return (long) rounded;
     }
 
     @Override
     public int compareTo(DataSize o)
     {
-        return Double.compare(getValue(Unit.BYTE), o.getValue(Unit.BYTE));
+        return Long.compare(bytes, o.bytes);
     }
 
     @Override
@@ -163,17 +274,13 @@ public class DataSize
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-
-        DataSize dataSize = (DataSize) o;
-
-        return compareTo(dataSize) == 0;
+        return bytes == ((DataSize) o).bytes;
     }
 
     @Override
     public int hashCode()
     {
-        double value = getValue(Unit.BYTE);
-        return Double.hashCode(value);
+        return Long.hashCode(bytes);
     }
 
     public enum Unit
@@ -203,6 +310,16 @@ public class DataSize
         public String getUnitString()
         {
             return unitString;
+        }
+
+        private static Unit fromUnitString(String unitString)
+        {
+            for (Unit unit : DATASIZE_UNITS) {
+                if (unit.unitString.equals(unitString)) {
+                    return unit;
+                }
+            }
+            throw new IllegalArgumentException("Unknown unit: " + unitString);
         }
     }
 }
