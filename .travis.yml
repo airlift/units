@@ -7,3 +7,7 @@ jdk:
   - openjdk11
   - openjdk12
   - openjdk13
+
+install: mvn install -B -V -DskipTests -Dair.check.skip-all
+
+script: mvn install -B -P ci
