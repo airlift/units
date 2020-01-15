@@ -18,7 +18,7 @@ package io.airlift.units;
 // forked from com.google.common.base.Preconditions
 final class Preconditions
 {
-    private Preconditions() { }
+    private Preconditions() {}
 
     static void checkArgument(boolean expression, String errorMessage)
     {

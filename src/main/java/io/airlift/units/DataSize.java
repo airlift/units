@@ -77,7 +77,7 @@ public class DataSize
     }
 
     /**
-     * Prefer {@link DataSize#of(long, Unit))} when conversion to the most 'succinct' unit is not necessary or desirable.
+     * Prefer {@link DataSize#of(long, Unit)} when conversion to the most 'succinct' unit is not necessary or desirable.
      * Otherwise, use {@link DataSize#succinctBytes(long)} since it will not incur rounding and loss of precision.
      * @deprecated use {@link DataSize#succinctBytes(long)} instead, double values are imprecise
      */

@@ -120,8 +120,7 @@ public class TestDataSize
                 DataSize.ofBytes(bytes).convertTo(MEGABYTE),
                 DataSize.ofBytes(bytes).convertTo(GIGABYTE),
                 DataSize.ofBytes(bytes).convertTo(TERABYTE),
-                DataSize.ofBytes(bytes).convertTo(PETABYTE)
-        );
+                DataSize.ofBytes(bytes).convertTo(PETABYTE));
     }
 
     @Test
@@ -143,8 +142,7 @@ public class TestDataSize
                 new DataSize(bytes / 1024 / 1024, MEGABYTE),
                 new DataSize(bytes / 1024 / 1024 / 1024, GIGABYTE),
                 new DataSize(bytes / 1024 / 1024 / 1024 / 1024, TERABYTE),
-                new DataSize(bytes / 1024 / 1024 / 1024 / 1024 / 1024, PETABYTE)
-        );
+                new DataSize(bytes / 1024 / 1024 / 1024 / 1024 / 1024, PETABYTE));
     }
 
     @Test(dataProvider = "printedValues")
@@ -332,7 +330,7 @@ public class TestDataSize
         assertJsonRoundTrip(DataSize.ofBytes(Long.MAX_VALUE));
 
         // Arbitrary assortment of values other than 1, primes and multiples of 2 and 10
-        long[] sizes = new long[] { 1, 2, 3, 5, 7, 8, 11, 16, 100 };
+        long[] sizes = new long[] {1, 2, 3, 5, 7, 8, 11, 16, 100};
 
         for (DataSize.Unit unit : DataSize.Unit.values()) {
             for (long size : sizes) {
@@ -450,6 +448,6 @@ public class TestDataSize
                 new Object[] {PETABYTE, GIGABYTE, 1024 * 1024},
                 new Object[] {PETABYTE, TERABYTE, 1024},
                 new Object[] {PETABYTE, PETABYTE, 1},
-                };
+        };
     }
 }

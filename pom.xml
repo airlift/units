@@ -18,7 +18,9 @@
     <inceptionYear>2016</inceptionYear>
 
     <properties>
-        <air.check.skip-extended>true</air.check.skip-extended>
+        <air.check.skip-license>true</air.check.skip-license>
+        <air.check.skip-pmd>true</air.check.skip-pmd>
+        <air.javadoc.lint>-missing</air.javadoc.lint>
     </properties>
 
     <organization>
