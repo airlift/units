@@ -56,7 +56,7 @@ public class DataSize
             return new DataSize(size, unit);
         }
         try {
-            return new DataSize(multiplyExact(size, unit.getFactor()), unit);
+            return new DataSize(multiplyExact(size, unit.inBytes()), unit);
         }
         catch (ArithmeticException e) {
             throw new IllegalArgumentException(format("size is too large to be represented in bytes: %s%s", size, unit.getUnitString()));
@@ -142,7 +142,7 @@ public class DataSize
         if (unit == Unit.BYTE) {
             return (double) bytes;
         }
-        return bytes * (1.0d / unit.getFactor());
+        return bytes * (1.0d / unit.inBytes());
     }
 
     /**
@@ -166,7 +166,7 @@ public class DataSize
     {
         Unit unitToUse = Unit.BYTE;
         for (Unit unitToTest : DATASIZE_UNITS) {
-            if (unitToTest.getFactor() <= bytes) {
+            if (unitToTest.bytes <= bytes) {
                 unitToUse = unitToTest;
             }
             else {
@@ -253,7 +253,7 @@ public class DataSize
         checkArgument(!Double.isNaN(size), "size is not a number");
         checkArgument(size >= 0, "size is negative: %s", size);
         requireNonNull(unit, "unit is null");
-        double rounded = floor((size / (1.0d / unit.getFactor())) + 0.5d);
+        double rounded = floor((size / (1.0d / unit.inBytes())) + 0.5d);
         checkArgument(rounded <= Long.MAX_VALUE,
                 "size is too large to be represented in requested unit as a long: %s%s", size, unit.getUnitString());
         return (long) rounded;
@@ -293,18 +293,18 @@ public class DataSize
         TERABYTE(1L << 40, "TB"),
         PETABYTE(1L << 50, "PB");
 
-        private final long factor;
+        private final long bytes;
         private final String unitString;
 
-        Unit(long factor, String unitString)
+        Unit(long bytes, String unitString)
         {
-            this.factor = factor;
+            this.bytes = bytes;
             this.unitString = unitString;
         }
 
-        long getFactor()
+        public long inBytes()
         {
-            return factor;
+            return bytes;
         }
 
         public String getUnitString()
