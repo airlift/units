@@ -70,7 +70,7 @@ public class TestDataSize
 
         for (DataSize.Unit unit : DataSize.Unit.values()) {
             DataSize oneInUnit = DataSize.of(1, unit);
-            assertEquals(oneInUnit.toBytesValueString(), unit.getFactor() + "B");
+            assertEquals(oneInUnit.toBytesValueString(), unit.inBytes() + "B");
             assertEquals(DataSize.valueOf(oneInUnit.toBytesValueString()), oneInUnit);
         }
 
