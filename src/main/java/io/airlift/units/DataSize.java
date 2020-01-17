@@ -234,6 +234,18 @@ public class DataSize
         requireNonNull(size, "size is null");
         checkArgument(!size.isEmpty(), "size is empty");
 
+        // Attempt fast path parsing of JSON values without regex validation
+        int stringLength = size.length();
+        if (stringLength > 1 && stringLength <= 20 && size.charAt(0) != '+' && size.charAt(stringLength - 1) == 'B') {
+            // must have at least 1 numeric char, less than Long.MAX_VALUE numeric chars, not start with a sign indicator, and be in unit BYTES
+            try {
+                return DataSize.ofBytes(Long.parseLong(size.substring(0, stringLength - 1)));
+            }
+            catch (Exception ignored) {
+                // Ignored, slow path will either handle or produce the appropriate error from here
+            }
+        }
+
         Matcher longOrDouble = DECIMAL_WITH_UNIT_PATTERN.matcher(size);
         if (!longOrDouble.matches()) {
             throw new IllegalArgumentException("size is not a valid data size string: " + size);
