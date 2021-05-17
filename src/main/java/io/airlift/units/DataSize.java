@@ -28,7 +28,7 @@ import static java.lang.Math.multiplyExact;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class DataSize
+public final class DataSize
         implements Comparable<DataSize>
 {
     private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
