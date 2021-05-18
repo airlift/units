@@ -38,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 import static org.assertj.core.data.Percentage.withPercentage;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.fail;
 
 public class TestDuration
@@ -215,14 +215,14 @@ public class TestDuration
     public void testEquals()
     {
         assertEquals(new Duration(12359.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS));
-        assertFalse(new Duration(12359.0d, MILLISECONDS).equals(new Duration(4444.0d, MILLISECONDS)));
+        assertNotEquals(new Duration(4444.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS));
     }
 
     @Test
     public void testHashCode()
     {
         assertEquals(new Duration(12359.0d, MILLISECONDS).hashCode(), new Duration(12359.0d, MILLISECONDS).hashCode());
-        assertFalse(new Duration(12359.0d, MILLISECONDS).hashCode() == new Duration(4444.0d, MILLISECONDS).hashCode());
+        assertNotEquals(new Duration(4444.0d, MILLISECONDS).hashCode(), new Duration(12359.0d, MILLISECONDS).hashCode());
     }
 
     @Test
