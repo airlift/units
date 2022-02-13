@@ -299,7 +299,7 @@ public final class DataSize
     {
         //This order is important, it should be in increasing magnitude.
         BYTE(1L, "B"),
-        KILOBYTE(1L << 10, "kB"),
+        KILOBYTE(1L << 10, "KB"),
         MEGABYTE(1L << 20, "MB"),
         GIGABYTE(1L << 30, "GB"),
         TERABYTE(1L << 40, "TB"),
