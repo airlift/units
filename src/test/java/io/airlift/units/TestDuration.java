@@ -177,22 +177,22 @@ public class TestDuration
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is negative")
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is negative: -1.0")
     public void testConstructorRejectsNegativeValue()
     {
         new Duration(-1, SECONDS);
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite")
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite: Infinity")
     public void testConstructorRejectsInfiniteValue()
     {
         new Duration(Double.POSITIVE_INFINITY, SECONDS);
     }
 
     @SuppressWarnings("ResultOfObjectAllocationIgnored")
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite")
-    public void testConstructorRejectsInfiniteValue2()
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "value is infinite: -Infinity")
+    public void testConstructorRejectsNegativeInfiniteValue()
     {
         new Duration(Double.NEGATIVE_INFINITY, SECONDS);
     }

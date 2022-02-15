@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.airlift.units.Preconditions.checkArgument;
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -64,9 +65,13 @@ public final class Duration
 
     public Duration(double value, TimeUnit unit)
     {
-        checkArgument(!Double.isInfinite(value), "value is infinite");
+        if (Double.isInfinite(value)) {
+            throw new IllegalArgumentException("value is infinite: " + value);
+        }
         checkArgument(!Double.isNaN(value), "value is not a number");
-        checkArgument(value >= 0, "value is negative");
+        if (value < 0) {
+            throw new IllegalArgumentException("value is negative: " + value);
+        }
         requireNonNull(unit, "unit is null");
 
         this.value = value;
@@ -98,8 +103,9 @@ public final class Duration
     {
         requireNonNull(timeUnit, "timeUnit is null");
         double rounded = Math.floor(getValue(timeUnit) + 0.5d);
-        checkArgument(rounded <= Long.MAX_VALUE,
-                "size is too large to be represented in requested unit as a long");
+        if (rounded > Long.MAX_VALUE) {
+            throw new IllegalArgumentException(format("value %s %s is too large to be represented in requested unit %s as a long", value, unit, timeUnit));
+        }
         return (long) rounded;
     }
 
@@ -136,7 +142,7 @@ public final class Duration
         requireNonNull(timeUnit, "timeUnit is null");
         double magnitude = getValue(timeUnit);
         String timeUnitAbbreviation = timeUnitToString(timeUnit);
-        return String.format(Locale.ENGLISH, "%.2f%s", magnitude, timeUnitAbbreviation);
+        return format(Locale.ENGLISH, "%.2f%s", magnitude, timeUnitAbbreviation);
     }
 
     @JsonCreator
