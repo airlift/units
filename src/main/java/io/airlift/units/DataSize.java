@@ -104,7 +104,7 @@ public final class DataSize
     }
 
     /**
-     * @deprecated Use {@link DataSize#ofBytes} instead. The imprecise nature of using doubles for DataSize is deprecated for removal
+     * @deprecated Use {@link DataSize#of(long, Unit)} instead. The imprecise nature of using doubles for DataSize is deprecated for removal
      */
     @Deprecated
     public DataSize(double size, Unit unit)
