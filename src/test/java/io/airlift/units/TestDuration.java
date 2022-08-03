@@ -38,7 +38,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 import static org.assertj.core.data.Percentage.withPercentage;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class TestDuration
@@ -292,6 +294,22 @@ public class TestDuration
     {
         assertEquals(new Duration(12359.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS));
         assertNotEquals(new Duration(4444.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS));
+    }
+
+    @Test
+    public void testIsZero()
+    {
+        assertTrue(Duration.ZERO.isZero());
+        assertTrue(new Duration(0, HOURS).isZero());
+        assertFalse(new Duration(12359.0d, MILLISECONDS).isZero());
+
+        // small values
+        assertFalse(new Duration(1e-20, MILLISECONDS).isZero());
+        assertFalse(new Duration(1e-20, NANOSECONDS).isZero());
+
+        // very small values
+        assertFalse(new Duration(Double.MIN_VALUE, MILLISECONDS).isZero());
+        assertTrue(new Duration(Double.MIN_VALUE, NANOSECONDS).isZero()); // TODO incorrect, due to equals converting to MILLIS
     }
 
     @Test

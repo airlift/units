@@ -46,6 +46,8 @@ public final class Duration
     // call allocates a new array at each call.
     private static final TimeUnit[] TIME_UNITS = TimeUnit.values();
 
+    public static final Duration ZERO = new Duration(0, SECONDS);
+
     public static Duration nanosSince(long start)
     {
         return succinctNanos(System.nanoTime() - start);
@@ -58,6 +60,9 @@ public final class Duration
 
     public static Duration succinctDuration(double value, TimeUnit unit)
     {
+        if (value == 0) {
+            return ZERO;
+        }
         return new Duration(value, unit).convertToMostSuccinctTimeUnit();
     }
 
@@ -191,6 +196,11 @@ public final class Duration
     public int compareTo(Duration o)
     {
         return Double.compare(getValue(MILLISECONDS), o.getValue(MILLISECONDS));
+    }
+
+    public boolean isZero()
+    {
+        return equals(ZERO);
     }
 
     @Override
