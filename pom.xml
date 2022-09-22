@@ -12,7 +12,7 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>95</version>
+        <version>129</version>
     </parent>
 
     <inceptionYear>2016</inceptionYear>
@@ -70,14 +70,14 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
-            <version>0.134</version>
+            <version>218</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>json</artifactId>
-            <version>0.134</version>
+            <version>218</version>
             <scope>test</scope>
         </dependency>
 

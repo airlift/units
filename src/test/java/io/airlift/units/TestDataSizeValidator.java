@@ -87,7 +87,7 @@ public class TestDataSizeValidator
 
         assertThatThrownBy(() -> VALIDATOR.validate(new MinAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
-                .hasMessage("No compliant io.airlift.units.MinDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+                .hasMessage("No validator found for (composition) constraint @MinDataSize declared on \"public java.util.Optional io.airlift.units.TestDataSizeValidator$MinAnnotationOnOptional.getConstrainedByMin()\" for validated type \"java.util.Optional\"");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
@@ -105,7 +105,7 @@ public class TestDataSizeValidator
 
         assertThatThrownBy(() -> VALIDATOR.validate(new MaxAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
-                .hasMessage("No compliant io.airlift.units.MaxDataSize ConstraintValidator found for annotated element of type java.util.Optional<T>");
+                .hasMessage("No validator found for (composition) constraint @MaxDataSize declared on \"public java.util.Optional io.airlift.units.TestDataSizeValidator$MaxAnnotationOnOptional.getConstrainedByMin()\" for validated type \"java.util.Optional\"");
 
         assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
