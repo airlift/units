@@ -21,6 +21,7 @@
         <air.check.skip-license>true</air.check.skip-license>
         <air.check.skip-pmd>true</air.check.skip-pmd>
         <air.javadoc.lint>-missing</air.javadoc.lint>
+        <project.build.targetJdk>11</project.build.targetJdk>
     </properties>
 
     <organization>
