@@ -209,7 +209,7 @@ public final class DataSize
     @JsonValue
     public String toBytesValueString()
     {
-        return Long.toString(bytes) + Unit.BYTE.getUnitString();
+        return bytes + Unit.BYTE.getUnitString();
     }
 
     @Override
@@ -222,7 +222,7 @@ public final class DataSize
         double unitValue = getValue();
         //noinspection FloatingPointEquality
         if (floor(unitValue) == unitValue) {
-            return Long.toString((long) unitValue) + unit.getUnitString();
+            return ((long) unitValue) + unit.getUnitString();
         }
         return format(Locale.ENGLISH, "%.2f%s", unitValue, unit.getUnitString());
     }
@@ -239,7 +239,7 @@ public final class DataSize
         if (stringLength > 1 && stringLength <= 20 && size.charAt(0) != '+' && size.charAt(stringLength - 1) == 'B') {
             // must have at least 1 numeric char, less than Long.MAX_VALUE numeric chars, not start with a sign indicator, and be in unit BYTES
             try {
-                return DataSize.ofBytes(Long.parseLong(size.substring(0, stringLength - 1)));
+                return DataSize.ofBytes(Long.parseLong(size, 0, stringLength - 1, 10));
             }
             catch (Exception ignored) {
                 // Ignored, slow path will either handle or produce the appropriate error from here
