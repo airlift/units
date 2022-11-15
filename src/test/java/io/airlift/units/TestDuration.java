@@ -105,6 +105,82 @@ public class TestDuration
                 .check();
     }
 
+    @Test
+    public void testToJavaTime()
+    {
+        assertThat(new Duration(0, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ZERO);
+
+        assertThat(new Duration(1, NANOSECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(1));
+        assertThat(new Duration(1, MICROSECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(1000));
+        assertThat(new Duration(1, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMillis(1));
+        assertThat(new Duration(1, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(1));
+        assertThat(new Duration(1, MINUTES).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMinutes(1));
+        assertThat(new Duration(1, HOURS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofHours(1));
+        assertThat(new Duration(1, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofDays(1));
+
+        assertThat(new Duration(42, NANOSECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(42));
+        assertThat(new Duration(42, MICROSECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(42000));
+        assertThat(new Duration(42, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMillis(42));
+        assertThat(new Duration(42, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(42));
+        assertThat(new Duration(42, MINUTES).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMinutes(42));
+        assertThat(new Duration(42, HOURS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofHours(42));
+        assertThat(new Duration(42, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofDays(42));
+
+        assertThat(new Duration(123456789, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMillis(123456789));
+        assertThat(new Duration(123456789, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(123456789));
+        assertThat(new Duration(123456789, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofDays(123456789));
+
+        assertThat(new Duration(1234567890123456789d, MILLISECONDS).toJavaTime())
+                .isBetween(
+                        java.time.Duration.ofMillis(1234567890123456700L),
+                        java.time.Duration.ofMillis(1234567890123456800L));
+        assertThat(new Duration(1234567890123456789d, SECONDS).toJavaTime())
+                .isBetween(
+                        java.time.Duration.ofSeconds(1234567890123456700L),
+                        java.time.Duration.ofSeconds(1234567890123456800L));
+        assertThat(new Duration(1234567890123456789d, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(Long.MAX_VALUE));
+
+        assertThat(new Duration(0.01, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(10_000));
+        assertThat(new Duration(0.01, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofMillis(10));
+        assertThat(new Duration(0.01, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(86400 / 100));
+
+        assertThat(new Duration(0.25, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(250_000));
+        assertThat(new Duration(0.25, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(250_000_000));
+        assertThat(new Duration(0.25, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(86400 / 4));
+
+        assertThat(new Duration(0.5, MILLISECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(500_000));
+        assertThat(new Duration(0.5, SECONDS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofNanos(500_000_000));
+        assertThat(new Duration(0.5, DAYS).toJavaTime())
+                .isEqualTo(java.time.Duration.ofSeconds(86400 / 2));
+    }
+
     private static List<Duration> generateTimeBucket(double seconds)
     {
         List<Duration> bucket = new ArrayList<>();
