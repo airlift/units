@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.airlift.units.Preconditions.checkArgument;
+import static java.lang.Math.floor;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -128,6 +129,28 @@ public final class Duration
             }
         }
         return convertTo(unitToUse);
+    }
+
+    public java.time.Duration toJavaTime()
+    {
+        long seconds;
+        long nanoAdjustment;
+        long secondsPerUnit = SECONDS.convert(1, unit);
+        long nanosPerUnit = NANOSECONDS.convert(1, unit);
+        if (secondsPerUnit > 1) {
+            seconds = (long) floor(value * secondsPerUnit);
+            nanoAdjustment = (long) floor((value - (double) seconds / secondsPerUnit) * nanosPerUnit);
+        }
+        else {
+            long unitsPerSecond = unit.convert(1, SECONDS);
+            seconds = (long) floor(value / unitsPerSecond);
+            nanoAdjustment = (long) floor((value - (double) seconds * unitsPerSecond) * nanosPerUnit);
+        }
+
+        if (seconds == Long.MAX_VALUE) {
+            nanoAdjustment = 0;
+        }
+        return java.time.Duration.ofSeconds(seconds, nanoAdjustment);
     }
 
     @JsonValue
