@@ -305,6 +305,8 @@ public class TestDuration
         assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000, MILLISECONDS), 0);
         assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000 * 1000L, MICROSECONDS), 0);
         assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000 * 1000L * 1000, NANOSECONDS), 0);
+
+        assertComparison(new Duration(0, NANOSECONDS), new Duration(Double.MIN_VALUE, NANOSECONDS), -1);
     }
 
     @Test
@@ -327,7 +329,7 @@ public class TestDuration
 
         // very small values
         assertFalse(new Duration(Double.MIN_VALUE, MILLISECONDS).isZero());
-        assertTrue(new Duration(Double.MIN_VALUE, NANOSECONDS).isZero()); // TODO incorrect, due to equals converting to MILLIS
+        assertFalse(new Duration(Double.MIN_VALUE, NANOSECONDS).isZero());
     }
 
     @Test
@@ -345,7 +347,7 @@ public class TestDuration
         assertThat(duration.getValue()).isEqualTo(nanos);
         assertThat(duration.getValue(NANOSECONDS)).isEqualTo(nanos);
         assertThat(duration.getValue(MILLISECONDS)).isEqualTo(nanos / 1000000);
-        assertThat(duration.getValue(SECONDS)).isEqualTo(nanos / 1000000 / 1000);
+        assertThat(duration.getValue(SECONDS)).isEqualTo(nanos / (1000000 * 1000));
         assertThat(duration.getValue(MINUTES)).isCloseTo(nanos / 1000000 / 1000 / 60, offset(1.0E10));
         assertThat(duration.getValue(HOURS)).isCloseTo(nanos / 1000000 / 1000 / 60 / 60, offset(1.0E10));
         assertThat(duration.getValue(DAYS)).isCloseTo(nanos / 1000000 / 1000 / 60 / 60 / 24, offset(1.0E10));
