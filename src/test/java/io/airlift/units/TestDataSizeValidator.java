@@ -13,36 +13,21 @@
  */
 package io.airlift.units;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
 import jakarta.validation.ValidationException;
-import jakarta.validation.Validator;
-import org.hibernate.validator.HibernateValidator;
-import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
-import java.util.Set;
 
+import static io.airlift.testing.ValidationAssertions.assertFailsValidation;
+import static io.airlift.testing.ValidationAssertions.assertValidates;
 import static io.airlift.units.ConstraintValidatorAssert.assertThat;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertTrue;
 
 public class TestDataSizeValidator
 {
-    private static final Validator VALIDATOR = Validation.byProvider(HibernateValidator.class)
-            .configure()
-            // Disable classpath scanning for configuration for security reasons
-            .ignoreXmlConfiguration()
-            // Disable default message interpolation which scans classpath and required runtime dependency
-            .messageInterpolator(new ParameterMessageInterpolator())
-            .buildValidatorFactory()
-            .getValidator();
-
     @Test
     public void testMaxDataSizeValidator()
     {
@@ -75,29 +60,29 @@ public class TestDataSizeValidator
     @Test
     public void testAllowsNullMinAnnotation()
     {
-        VALIDATOR.validate(new NullMinAnnotation());
+        assertValidates(new NullMinAnnotation());
     }
 
     @Test
     public void testAllowsNullMaxAnnotation()
     {
-        VALIDATOR.validate(new NullMaxAnnotation());
+        assertValidates(new NullMaxAnnotation());
     }
 
     @Test
     public void testDetectsBrokenMinAnnotation()
     {
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMinAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MinDataSizeValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasRootCauseMessage("size is not a valid data size string: broken");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new MinAnnotationOnOptional()))
+        assertThatThrownBy(() -> assertValidates(new MinAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("No validator could be found for constraint 'io.airlift.units.MinDataSize' validating type 'java.util.Optional<io.airlift.units.DataSize>'. Check configuration for 'constrainedByMin'");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMinAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenOptionalMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MinDataSizeValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
@@ -107,17 +92,17 @@ public class TestDataSizeValidator
     @Test
     public void testDetectsBrokenMaxAnnotation()
     {
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMaxAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MaxDataSizeValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasRootCauseMessage("size is not a valid data size string: broken");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new MaxAnnotationOnOptional()))
+        assertThatThrownBy(() -> assertValidates(new MaxAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("No validator could be found for constraint 'io.airlift.units.MaxDataSize' validating type 'java.util.Optional<io.airlift.units.DataSize>'. Check configuration for 'constrainedByMin'");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMaxAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenOptionalMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MaxDataSizeValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
@@ -127,69 +112,30 @@ public class TestDataSizeValidator
     @Test
     public void testPassesValidation()
     {
-        assertTrue(VALIDATOR.validate(new ConstrainedDataSize(new DataSize(7, MEGABYTE))).isEmpty());
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(7, MEGABYTE))))).isEmpty();
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.empty()))).isEmpty();
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDataSize(null))).isEmpty();
+        assertValidates(new ConstrainedDataSize(new DataSize(7, MEGABYTE)));
+        assertValidates(new ConstrainedOptionalDataSize(Optional.of(new DataSize(7, MEGABYTE))));
+        assertValidates(new ConstrainedOptionalDataSize(Optional.empty()));
+        assertValidates(new ConstrainedOptionalDataSize(null));
     }
 
     @Test
     public void testFailsMaxDataSizeConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(11, MEGABYTE)));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDataSize.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
+        assertFailsValidation(new ConstrainedDataSize(new DataSize(11, MEGABYTE)), "constrainedByMinAndMax", "must be less than or equal to 10000kB", MaxDataSize.class);
+        assertFailsValidation(new ConstrainedDataSize(new DataSize(11, MEGABYTE)), "constrainedByMax", "must be less than or equal to 10MB", MaxDataSize.class);
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDataSize.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10000kB", "must be less than or equal to 10MB");
+        assertFailsValidation(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))), "constrainedByMinAndMax", "must be less than or equal to 10000kB", MaxDataSize.class);
+        assertFailsValidation(new ConstrainedOptionalDataSize(Optional.of(new DataSize(11, MEGABYTE))), "constrainedByMax", "must be less than or equal to 10MB", MaxDataSize.class);
     }
 
     @Test
     public void testFailsMinDataSizeConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDataSize(new DataSize(1, MEGABYTE)));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDataSize.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
+        assertFailsValidation(new ConstrainedDataSize(new DataSize(1, MEGABYTE)), "constrainedByMin", "must be greater than or equal to 5MB", MinDataSize.class);
+        assertFailsValidation(new ConstrainedDataSize(new DataSize(1, MEGABYTE)), "constrainedByMinAndMax", "must be greater than or equal to 5000kB", MinDataSize.class);
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDataSize.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5MB", "must be greater than or equal to 5000kB");
+        assertFailsValidation(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))), "constrainedByMin", "must be greater than or equal to 5MB", MinDataSize.class);
+        assertFailsValidation(new ConstrainedOptionalDataSize(Optional.of(new DataSize(1, MEGABYTE))), "constrainedByMinAndMax", "must be greater than or equal to 5000kB", MinDataSize.class);
     }
 
     @SuppressWarnings("UnusedDeclaration")
