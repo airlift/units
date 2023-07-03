@@ -290,6 +290,24 @@ public class TestDuration
     }
 
     @Test
+    public void testCompareTo()
+    {
+        assertComparison(new Duration(12359.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS), 0);
+        assertComparison(new Duration(0, MILLISECONDS), new Duration(12359.0d, MILLISECONDS), -1);
+        assertComparison(new Duration(1, MILLISECONDS), new Duration(0, MILLISECONDS), 1);
+        assertComparison(new Duration(1, NANOSECONDS), new Duration(0, NANOSECONDS), 1);
+        assertComparison(new Duration(3, NANOSECONDS), new Duration(2, NANOSECONDS), 1);
+        assertComparison(new Duration(3, NANOSECONDS), new Duration(3, NANOSECONDS), 0);
+
+        assertComparison(new Duration(1, DAYS), new Duration(24, HOURS), 0);
+        assertComparison(new Duration(1, DAYS), new Duration(24 * 60, MINUTES), 0);
+        assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60, SECONDS), 0);
+        assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000, MILLISECONDS), 0);
+        assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000 * 1000L, MICROSECONDS), 0);
+        assertComparison(new Duration(1, DAYS), new Duration(24 * 60 * 60 * 1000 * 1000L * 1000, NANOSECONDS), 0);
+    }
+
+    @Test
     public void testEquals()
     {
         assertEquals(new Duration(12359.0d, MILLISECONDS), new Duration(12359.0d, MILLISECONDS));
@@ -492,6 +510,34 @@ public class TestDuration
                 new Object[] {DAYS, MINUTES, 60 * 24},
                 new Object[] {DAYS, HOURS, 24},
                 new Object[] {DAYS, DAYS, 1},
-                };
+        };
+    }
+
+    private static void assertComparison(Duration left, Duration right, int expectedSign)
+    {
+        if (expectedSign == 0) {
+            assertThat(left)
+                    .isEqualTo(right)
+                    .isEqualByComparingTo(right);
+            assertThat(right)
+                    .isEqualTo(left)
+                    .isEqualByComparingTo(left);
+        }
+        else if (expectedSign < 0) {
+            assertThat(left)
+                    .isNotEqualTo(right)
+                    .isLessThan(right);
+            assertThat(right)
+                    .isNotEqualTo(left)
+                    .isGreaterThan(left);
+        }
+        else {
+            assertThat(left)
+                    .isNotEqualTo(right)
+                    .isGreaterThan(right);
+            assertThat(right)
+                    .isNotEqualTo(left)
+                    .isLessThan(left);
+        }
     }
 }
