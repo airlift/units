@@ -71,14 +71,14 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
-            <version>218</version>
+            <version>234</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>json</artifactId>
-            <version>233</version>
+            <version>234</version>
             <scope>test</scope>
         </dependency>
 

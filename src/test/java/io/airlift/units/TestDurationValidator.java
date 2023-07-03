@@ -15,33 +15,19 @@
  */
 package io.airlift.units;
 
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validation;
 import jakarta.validation.ValidationException;
-import jakarta.validation.Validator;
-import org.hibernate.validator.HibernateValidator;
-import org.hibernate.validator.messageinterpolation.ParameterMessageInterpolator;
 import org.testng.annotations.Test;
 
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static io.airlift.testing.ValidationAssertions.assertFailsValidation;
+import static io.airlift.testing.ValidationAssertions.assertValidates;
 import static io.airlift.units.ConstraintValidatorAssert.assertThat;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestDurationValidator
 {
-    private static final Validator VALIDATOR = Validation.byProvider(HibernateValidator.class)
-            .configure()
-            // Disable classpath scanning for configuration for security reasons
-            .ignoreXmlConfiguration()
-            // Disable default message interpolation which scans classpath and required runtime dependency
-            .messageInterpolator(new ParameterMessageInterpolator())
-            .buildValidatorFactory()
-            .getValidator();
-
     @Test
     public void testMaxDurationValidator()
     {
@@ -67,29 +53,29 @@ public class TestDurationValidator
     @Test
     public void testAllowsNullMinAnnotation()
     {
-        VALIDATOR.validate(new NullMinAnnotation());
+        assertValidates(new NullMinAnnotation());
     }
 
     @Test
     public void testAllowsNullMaxAnnotation()
     {
-        VALIDATOR.validate(new NullMaxAnnotation());
+        assertValidates(new NullMaxAnnotation());
     }
 
     @Test
     public void testDetectsBrokenMinAnnotation()
     {
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMinAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MinDurationValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasRootCauseMessage("duration is not a valid data duration string: broken");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new MinAnnotationOnOptional()))
+        assertThatThrownBy(() -> assertValidates(new MinAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("No validator could be found for constraint 'io.airlift.units.MinDuration' validating type 'java.util.Optional<io.airlift.units.Duration>'. Check configuration for 'constrainedByMin'");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMinAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenOptionalMinAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MinDurationValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
@@ -99,17 +85,17 @@ public class TestDurationValidator
     @Test
     public void testDetectsBrokenMaxAnnotation()
     {
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenMaxAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MinDurationValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
                 .hasRootCauseMessage("duration is not a valid data duration string: broken");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new MaxAnnotationOnOptional()))
+        assertThatThrownBy(() -> assertValidates(new MaxAnnotationOnOptional()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessageContaining("No validator could be found for constraint 'io.airlift.units.MaxDuration' validating type 'java.util.Optional<io.airlift.units.Duration>'. Check configuration for 'constrainedByMin'");
 
-        assertThatThrownBy(() -> VALIDATOR.validate(new BrokenOptionalMaxAnnotation()))
+        assertThatThrownBy(() -> assertValidates(new BrokenOptionalMaxAnnotation()))
                 .isInstanceOf(ValidationException.class)
                 .hasMessage("HV000032: Unable to initialize io.airlift.units.MaxDurationValidator.")
                 .hasRootCauseInstanceOf(IllegalArgumentException.class)
@@ -119,69 +105,30 @@ public class TestDurationValidator
     @Test
     public void testPassesValidation()
     {
-        assertThat(VALIDATOR.validate(new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS)))).isEmpty();
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(7, TimeUnit.SECONDS))))).isEmpty();
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.empty()))).isEmpty();
-
-        assertThat(VALIDATOR.validate(new ConstrainedOptionalDuration(null))).isEmpty();
+        assertValidates(new ConstrainedDuration(new Duration(7, TimeUnit.SECONDS)));
+        assertValidates(new ConstrainedOptionalDuration(Optional.of(new Duration(7, TimeUnit.SECONDS))));
+        assertValidates(new ConstrainedOptionalDuration(Optional.empty()));
+        assertValidates(new ConstrainedOptionalDuration(null));
     }
 
     @Test
     public void testFailsMaxDurationConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS)));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDuration.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
+        assertFailsValidation(new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS)), "constrainedByMax", "must be less than or equal to 10s", MaxDuration.class);
+        assertFailsValidation(new ConstrainedDuration(new Duration(11, TimeUnit.SECONDS)), "constrainedByMinAndMax", "must be less than or equal to 10000ms", MaxDuration.class);
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(11, TimeUnit.SECONDS))));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MaxDuration.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMax", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be less than or equal to 10s", "must be less than or equal to 10000ms");
+        assertFailsValidation(new ConstrainedOptionalDuration(Optional.of(new Duration(11, TimeUnit.SECONDS))), "constrainedByMax", "must be less than or equal to 10s", MaxDuration.class);
+        assertFailsValidation(new ConstrainedOptionalDuration(Optional.of(new Duration(11, TimeUnit.SECONDS))), "constrainedByMinAndMax", "must be less than or equal to 10000ms", MaxDuration.class);
     }
 
     @Test
     public void testFailsMinDurationConstraint()
     {
-        Set<? extends ConstraintViolation<?>> violations = VALIDATOR.validate(new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS)));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDuration.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
+        assertFailsValidation(new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS)), "constrainedByMin", "must be greater than or equal to 5s", MinDuration.class);
+        assertFailsValidation(new ConstrainedDuration(new Duration(1, TimeUnit.SECONDS)), "constrainedByMinAndMax", "must be greater than or equal to 5000ms", MinDuration.class);
 
-        violations = VALIDATOR.validate(new ConstrainedOptionalDuration(Optional.of(new Duration(1, TimeUnit.SECONDS))));
-        assertThat(violations).hasSize(2);
-        assertThat(violations)
-                .extracting(violation -> violation.getConstraintDescriptor().getAnnotation())
-                .allMatch(MinDuration.class::isInstance);
-        assertThat(violations)
-                .extracting(violation -> violation.getPropertyPath().toString())
-                .containsOnly("constrainedByMin", "constrainedByMinAndMax");
-        assertThat(violations)
-                .extracting(ConstraintViolation::getMessage)
-                .containsOnly("must be greater than or equal to 5000ms", "must be greater than or equal to 5s");
+        assertFailsValidation(new ConstrainedOptionalDuration(Optional.of(new Duration(1, TimeUnit.SECONDS))), "constrainedByMin", "must be greater than or equal to 5s", MinDuration.class);
+        assertFailsValidation(new ConstrainedOptionalDuration(Optional.of(new Duration(1, TimeUnit.SECONDS))), "constrainedByMinAndMax", "must be greater than or equal to 5000ms", MinDuration.class);
     }
 
     @SuppressWarnings("UnusedDeclaration")
