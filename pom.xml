@@ -22,6 +22,7 @@
         <air.check.skip-pmd>true</air.check.skip-pmd>
         <air.javadoc.lint>-missing</air.javadoc.lint>
         <project.build.targetJdk>17</project.build.targetJdk>
+        <dep.airlift.version>234</dep.airlift.version>
     </properties>
 
     <organization>
@@ -71,14 +72,14 @@
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>testing</artifactId>
-            <version>234</version>
+            <version>${dep.airlift.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>io.airlift</groupId>
             <artifactId>json</artifactId>
-            <version>234</version>
+            <version>${dep.airlift.version}</version>
             <scope>test</scope>
         </dependency>
 
