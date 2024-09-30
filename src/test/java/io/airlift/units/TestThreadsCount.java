@@ -17,8 +17,8 @@ import org.testng.annotations.Test;
 
 import static io.airlift.units.ThreadCount.MachineInfo.getAvailablePhysicalProcessorCount;
 import static java.lang.Math.round;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 public class TestThreadsCount
 {
