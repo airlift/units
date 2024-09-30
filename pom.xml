@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.airlift</groupId>
+        <artifactId>airbase</artifactId>
+        <version>182</version>
+    </parent>
     <artifactId>units</artifactId>
     <version>1.11-SNAPSHOT</version>
     <packaging>jar</packaging>
@@ -9,21 +15,7 @@
     <description>Library for immutable human-friendly units</description>
     <url>https://github.com/airlift/units</url>
 
-    <parent>
-        <groupId>io.airlift</groupId>
-        <artifactId>airbase</artifactId>
-        <version>143</version>
-    </parent>
-
     <inceptionYear>2016</inceptionYear>
-
-    <properties>
-        <air.check.skip-license>true</air.check.skip-license>
-        <air.check.skip-pmd>true</air.check.skip-pmd>
-        <air.javadoc.lint>-missing</air.javadoc.lint>
-        <project.build.targetJdk>17</project.build.targetJdk>
-        <dep.airlift.version>234</dep.airlift.version>
-    </properties>
 
     <organization>
         <name>Airlift</name>
@@ -37,7 +29,21 @@
         </license>
     </licenses>
 
+    <properties>
+        <air.check.skip-license>true</air.check.skip-license>
+        <air.check.skip-pmd>true</air.check.skip-pmd>
+        <air.javadoc.lint>-missing</air.javadoc.lint>
+        <project.build.targetJdk>17</project.build.targetJdk>
+        <dep.airlift.version>234</dep.airlift.version>
+    </properties>
+
     <dependencies>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
@@ -45,34 +51,8 @@
         </dependency>
 
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-annotations</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- for testing -->
-        <dependency>
-            <groupId>org.testng</groupId>
-            <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.airlift</groupId>
-            <artifactId>testing</artifactId>
-            <version>${dep.airlift.version}</version>
             <scope>test</scope>
         </dependency>
 
@@ -84,8 +64,28 @@
         </dependency>
 
         <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>testing</artifactId>
+            <version>${dep.airlift.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- for testing -->
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
