@@ -24,6 +24,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.airlift.units.Preconditions.checkArgument;
+import static java.lang.Double.isFinite;
 import static java.lang.Math.floor;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
@@ -102,7 +103,150 @@ public final class Duration
     public double getValue(TimeUnit timeUnit)
     {
         requireNonNull(timeUnit, "timeUnit is null");
-        return value * (millisPerTimeUnit(this.unit) * 1.0 / millisPerTimeUnit(timeUnit));
+        switch (unit) {
+            case DAYS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value;
+                    case HOURS:
+                        return value * 24;
+                    case MINUTES:
+                        return value * (24 * 60);
+                    case SECONDS:
+                        return value * (24 * 60 * 60);
+                    case MILLISECONDS:
+                        return value * (24 * 60 * 60 * 1000);
+                    case MICROSECONDS:
+                        return value * (24 * 60 * 60 * 1000 * 1000L);
+                    case NANOSECONDS:
+                        return value * (24 * 60 * 60 * 1000 * 1000L * 1000);
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case HOURS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / 24;
+                    case HOURS:
+                        return value;
+                    case MINUTES:
+                        return value * 60;
+                    case SECONDS:
+                        return value * (60 * 60);
+                    case MILLISECONDS:
+                        return value * (60 * 60 * 1000);
+                    case MICROSECONDS:
+                        return value * (60 * 60 * 1000 * 1000L);
+                    case NANOSECONDS:
+                        return value * (60 * 60 * 1000 * 1000L * 1000);
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case MINUTES:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / (24 * 60);
+                    case HOURS:
+                        return value / 60;
+                    case MINUTES:
+                        return value;
+                    case SECONDS:
+                        return value * 60;
+                    case MILLISECONDS:
+                        return value * (60 * 1000);
+                    case MICROSECONDS:
+                        return value * (60 * 1000 * 1000);
+                    case NANOSECONDS:
+                        return value * (60 * 1000 * 1000 * 1000L);
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case SECONDS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / (24 * 60 * 60);
+                    case HOURS:
+                        return value / (60 * 60);
+                    case MINUTES:
+                        return value / 60;
+                    case SECONDS:
+                        return value;
+                    case MILLISECONDS:
+                        return value * (1000);
+                    case MICROSECONDS:
+                        return value * (1000 * 1000);
+                    case NANOSECONDS:
+                        return value * (1000 * 1000 * 1000);
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case MILLISECONDS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / (24 * 60 * 60 * 1000);
+                    case HOURS:
+                        return value / (60 * 60 * 1000);
+                    case MINUTES:
+                        return value / (60 * 1000);
+                    case SECONDS:
+                        return value / 1000;
+                    case MILLISECONDS:
+                        return value;
+                    case MICROSECONDS:
+                        return value * 1000;
+                    case NANOSECONDS:
+                        return value * (1000 * 1000);
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case MICROSECONDS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / (24 * 60 * 60 * 1000 * 1000L);
+                    case HOURS:
+                        return value / (60 * 60 * 1000 * 1000L);
+                    case MINUTES:
+                        return value / (60 * 1000 * 1000);
+                    case SECONDS:
+                        return value / (1000 * 1000);
+                    case MILLISECONDS:
+                        return value / 1000;
+                    case MICROSECONDS:
+                        return value;
+                    case NANOSECONDS:
+                        return value * 1000;
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            case NANOSECONDS:
+                switch (timeUnit) {
+                    case DAYS:
+                        return value / (24 * 60 * 60 * 1000 * 1000L * 1000);
+                    case HOURS:
+                        return value / (60 * 60 * 1000 * 1000L * 1000);
+                    case MINUTES:
+                        return value / (60 * 1000 * 1000 * 1000L);
+                    case SECONDS:
+                        return value / (1000 * 1000 * 1000);
+                    case MILLISECONDS:
+                        return value / (1000 * 1000);
+                    case MICROSECONDS:
+                        return value / 1000;
+                    case NANOSECONDS:
+                        return value;
+                    default:
+                        throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
+                }
+
+            default:
+                throw new IllegalArgumentException("Unsupported time unit " + unit);
+        }
     }
 
     public long roundTo(TimeUnit timeUnit)
@@ -193,9 +337,19 @@ public final class Duration
     }
 
     @Override
-    public int compareTo(Duration o)
+    public int compareTo(Duration that)
     {
-        return Double.compare(getValue(MILLISECONDS), o.getValue(MILLISECONDS));
+        double thisValueMillis = this.getValue(MILLISECONDS);
+        double thatValueMillis = that.getValue(MILLISECONDS);
+        int compare = Double.compare(thisValueMillis, thatValueMillis);
+        if (compare == 0) {
+            double thisValueNanos = this.getValue(NANOSECONDS);
+            double thatValueNanos = that.getValue(NANOSECONDS);
+            if (isFinite(thisValueNanos) && isFinite(thatValueNanos)) {
+                compare = Double.compare(thisValueNanos, thatValueNanos);
+            }
+        }
+        return compare;
     }
 
     public boolean isZero()
@@ -266,28 +420,6 @@ public final class Duration
                 return "h";
             case DAYS:
                 return "d";
-            default:
-                throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
-        }
-    }
-
-    private static double millisPerTimeUnit(TimeUnit timeUnit)
-    {
-        switch (timeUnit) {
-            case NANOSECONDS:
-                return 1.0 / 1000000.0;
-            case MICROSECONDS:
-                return 1.0 / 1000.0;
-            case MILLISECONDS:
-                return 1;
-            case SECONDS:
-                return 1000;
-            case MINUTES:
-                return 1000 * 60;
-            case HOURS:
-                return 1000 * 60 * 60;
-            case DAYS:
-                return 1000 * 60 * 60 * 24;
             default:
                 throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
         }
