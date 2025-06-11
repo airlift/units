@@ -18,13 +18,13 @@ package io.airlift.units;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.airlift.units.Preconditions.checkArgument;
 import static java.lang.Math.floor;
+import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -170,7 +170,17 @@ public final class Duration
         requireNonNull(timeUnit, "timeUnit is null");
         double magnitude = getValue(timeUnit);
         String timeUnitAbbreviation = timeUnitToString(timeUnit);
-        return format(Locale.ENGLISH, "%.2f%s", magnitude, timeUnitAbbreviation);
+
+        return formatMagnitude(magnitude) + timeUnitAbbreviation;
+    }
+
+    private static String formatMagnitude(double value)
+    {
+        long scaled = round(value * 100);
+        long integerPart = scaled / 100;
+        long fractionalPart = scaled % 100;
+
+        return integerPart + "." + (fractionalPart < 10 ? "0" : "") + fractionalPart;
     }
 
     @JsonCreator
