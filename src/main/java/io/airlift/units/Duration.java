@@ -238,68 +238,42 @@ public final class Duration
     public static TimeUnit valueOfTimeUnit(String timeUnitString)
     {
         requireNonNull(timeUnitString, "timeUnitString is null");
-        switch (timeUnitString) {
-            case "ns":
-                return NANOSECONDS;
-            case "us":
-                return MICROSECONDS;
-            case "ms":
-                return MILLISECONDS;
-            case "s":
-                return SECONDS;
-            case "m":
-                return MINUTES;
-            case "h":
-                return HOURS;
-            case "d":
-                return DAYS;
-            default:
-                throw new IllegalArgumentException("Unknown time unit: " + timeUnitString);
-        }
+        return switch (timeUnitString) {
+            case "ns" -> NANOSECONDS;
+            case "us" -> MICROSECONDS;
+            case "ms" -> MILLISECONDS;
+            case "s" -> SECONDS;
+            case "m" -> MINUTES;
+            case "h" -> HOURS;
+            case "d" -> DAYS;
+            default -> throw new IllegalArgumentException("Unknown time unit: " + timeUnitString);
+        };
     }
 
     public static String timeUnitToString(TimeUnit timeUnit)
     {
         requireNonNull(timeUnit, "timeUnit is null");
-        switch (timeUnit) {
-            case NANOSECONDS:
-                return "ns";
-            case MICROSECONDS:
-                return "us";
-            case MILLISECONDS:
-                return "ms";
-            case SECONDS:
-                return "s";
-            case MINUTES:
-                return "m";
-            case HOURS:
-                return "h";
-            case DAYS:
-                return "d";
-            default:
-                throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
-        }
+        return switch (timeUnit) {
+            case NANOSECONDS -> "ns";
+            case MICROSECONDS -> "us";
+            case MILLISECONDS -> "ms";
+            case SECONDS -> "s";
+            case MINUTES -> "m";
+            case HOURS -> "h";
+            case DAYS -> "d";
+        };
     }
 
     private static double millisPerTimeUnit(TimeUnit timeUnit)
     {
-        switch (timeUnit) {
-            case NANOSECONDS:
-                return 1.0 / 1000000.0;
-            case MICROSECONDS:
-                return 1.0 / 1000.0;
-            case MILLISECONDS:
-                return 1;
-            case SECONDS:
-                return 1000;
-            case MINUTES:
-                return 1000 * 60;
-            case HOURS:
-                return 1000 * 60 * 60;
-            case DAYS:
-                return 1000 * 60 * 60 * 24;
-            default:
-                throw new IllegalArgumentException("Unsupported time unit " + timeUnit);
-        }
+        return switch (timeUnit) {
+            case NANOSECONDS -> 1.0 / 1000000.0;
+            case MICROSECONDS -> 1.0 / 1000.0;
+            case MILLISECONDS -> 1;
+            case SECONDS -> 1000;
+            case MINUTES -> 1000 * 60;
+            case HOURS -> 1000 * 60 * 60;
+            case DAYS -> 1000 * 60 * 60 * 24;
+        };
     }
 }
