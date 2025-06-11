@@ -102,7 +102,7 @@ public final class Duration
     public double getValue(TimeUnit timeUnit)
     {
         requireNonNull(timeUnit, "timeUnit is null");
-        return value * (millisPerTimeUnit(this.unit) * 1.0 / millisPerTimeUnit(timeUnit));
+        return value * (millisPerTimeUnit(this.unit) / millisPerTimeUnit(timeUnit));
     }
 
     public long roundTo(TimeUnit timeUnit)
