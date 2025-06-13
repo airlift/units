@@ -117,7 +117,6 @@ public final class Duration
 
     public Duration convertTo(TimeUnit timeUnit)
     {
-        requireNonNull(timeUnit, "timeUnit is null");
         if (this.unit == timeUnit) {
             return this;
         }
