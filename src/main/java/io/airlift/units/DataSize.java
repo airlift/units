@@ -73,7 +73,7 @@ public final class DataSize
      */
     public static DataSize succinctBytes(long bytes)
     {
-        return ofBytes(bytes).succinct();
+        return new DataSize(bytes, succinctUnit(bytes));
     }
 
     /**
@@ -85,7 +85,8 @@ public final class DataSize
     @Deprecated
     public static DataSize succinctDataSize(double size, Unit unit)
     {
-        return new DataSize(roundDoubleSizeInUnitToLongBytes(size, unit), unit).succinct();
+        long roundedSize = roundDoubleSizeInUnitToLongBytes(size, unit);
+        return new DataSize(roundedSize, succinctUnit(roundedSize));
     }
 
     private final long bytes;
@@ -164,7 +165,7 @@ public final class DataSize
         return (long) rounded;
     }
 
-    private Unit succinctUnit()
+    private static Unit succinctUnit(long bytes)
     {
         Unit unitToUse = Unit.BYTE;
         for (Unit unitToTest : DATASIZE_UNITS) {
@@ -190,12 +191,15 @@ public final class DataSize
 
     public DataSize to(Unit unit)
     {
+        if (unit == this.unit) {
+            return this;
+        }
         return new DataSize(bytes, unit);
     }
 
     public DataSize succinct()
     {
-        return to(succinctUnit());
+        return to(succinctUnit(bytes));
     }
 
     /**
