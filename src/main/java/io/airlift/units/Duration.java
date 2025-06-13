@@ -63,7 +63,12 @@ public final class Duration
         if (value == 0) {
             return ZERO;
         }
-        return new Duration(value, unit).convertToMostSuccinctTimeUnit();
+
+        TimeUnit succinctUnit = succinctUnit(value, unit);
+        if (succinctUnit == unit) {
+            return new Duration(value, unit);
+        }
+        return new Duration(convertValue(value, unit, succinctUnit), succinctUnit);
     }
 
     private final double value;
@@ -101,8 +106,7 @@ public final class Duration
 
     public double getValue(TimeUnit timeUnit)
     {
-        requireNonNull(timeUnit, "timeUnit is null");
-        return value * (millisPerTimeUnit(this.unit) / millisPerTimeUnit(timeUnit));
+        return convertValue(value, unit, timeUnit);
     }
 
     public long roundTo(TimeUnit timeUnit)
@@ -125,17 +129,7 @@ public final class Duration
 
     public Duration convertToMostSuccinctTimeUnit()
     {
-        TimeUnit unitToUse = NANOSECONDS;
-        for (TimeUnit unitToTest : TIME_UNITS) {
-            // since time units are powers of ten, we can get rounding errors here, so fuzzy match
-            if (getValue(unitToTest) > 0.9999) {
-                unitToUse = unitToTest;
-            }
-            else {
-                break;
-            }
-        }
-        return convertTo(unitToUse);
+        return convertTo(succinctUnit(value, unit));
     }
 
     public java.time.Duration toJavaTime()
@@ -202,6 +196,32 @@ public final class Duration
 
         TimeUnit timeUnit = valueOfTimeUnit(unitString);
         return new Duration(value, timeUnit);
+    }
+
+    private static TimeUnit succinctUnit(double value, TimeUnit unit)
+    {
+        TimeUnit unitToUse = NANOSECONDS;
+        for (TimeUnit unitToTest : TIME_UNITS) {
+            // since time units are powers of ten, we can get rounding errors here, so fuzzy match
+            if (convertValue(value, unit, unitToTest) > 0.9999) {
+                unitToUse = unitToTest;
+            }
+            else {
+                break;
+            }
+        }
+        return unitToUse;
+    }
+
+    private static double convertValue(double value, TimeUnit fromUnit, TimeUnit toUnit)
+    {
+        requireNonNull(fromUnit, "fromUnit is null");
+        requireNonNull(toUnit, "toUnit is null");
+        if (fromUnit == toUnit) {
+            return value;
+        }
+
+        return value * (millisPerTimeUnit(fromUnit) / millisPerTimeUnit(toUnit));
     }
 
     @Override
