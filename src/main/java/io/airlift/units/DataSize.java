@@ -85,7 +85,8 @@ public final class DataSize
     @Deprecated
     public static DataSize succinctDataSize(double size, Unit unit)
     {
-        return new DataSize(roundDoubleSizeInUnitToLongBytes(size, unit), unit).succinct();
+        long roundedSize = roundDoubleSizeInUnitToLongBytes(size, unit);
+        return new DataSize(roundedSize, succinctUnit(roundedSize));
     }
 
     private final long bytes;
