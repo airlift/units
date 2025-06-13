@@ -73,7 +73,7 @@ public final class DataSize
      */
     public static DataSize succinctBytes(long bytes)
     {
-        return ofBytes(bytes).succinct();
+        return new DataSize(bytes, succinctUnit(bytes));
     }
 
     /**
@@ -164,7 +164,7 @@ public final class DataSize
         return (long) rounded;
     }
 
-    private Unit succinctUnit()
+    private static Unit succinctUnit(long bytes)
     {
         Unit unitToUse = Unit.BYTE;
         for (Unit unitToTest : DATASIZE_UNITS) {
@@ -195,7 +195,7 @@ public final class DataSize
 
     public DataSize succinct()
     {
-        return to(succinctUnit());
+        return to(succinctUnit(bytes));
     }
 
     /**
