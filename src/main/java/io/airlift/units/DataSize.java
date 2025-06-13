@@ -190,6 +190,9 @@ public final class DataSize
 
     public DataSize to(Unit unit)
     {
+        if (unit == this.unit) {
+            return this;
+        }
         return new DataSize(bytes, unit);
     }
 
