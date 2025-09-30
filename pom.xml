@@ -5,13 +5,14 @@
     <parent>
         <groupId>io.airlift</groupId>
         <artifactId>airbase</artifactId>
-        <version>182</version>
+        <version>307</version>
     </parent>
+
     <artifactId>units</artifactId>
     <version>1.11-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>units</name>
+    <name>${artifactId}</name>
     <description>Library for immutable human-friendly units</description>
     <url>https://github.com/airlift/units</url>
 
