@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>units</artifactId>
-    <version>1.11</version>
+    <version>1.12-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>${artifactId}</name>
@@ -33,7 +33,7 @@
     <scm>
         <connection>scm:git:git://github.com/airlift/units.git</connection>
         <developerConnection>scm:git:git@github.com:airlift/units.git</developerConnection>
-        <tag>1.11</tag>
+        <tag>HEAD</tag>
         <url>https://github.com/airlift/units/tree/master</url>
     </scm>
 
