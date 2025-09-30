@@ -31,6 +31,8 @@ import static java.util.Objects.requireNonNull;
 public final class DataSize
         implements Comparable<DataSize>
 {
+    public static final DataSize ZERO = DataSize.ofBytes(0);
+
     private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
     // We iterate over the DATASIZE_UNITS constant in convertToMostSuccinctDataSize()
