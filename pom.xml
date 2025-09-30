@@ -34,12 +34,12 @@
         <air.check.skip-license>true</air.check.skip-license>
         <air.check.skip-pmd>true</air.check.skip-pmd>
         <air.javadoc.lint>-missing</air.javadoc.lint>
-        <project.build.targetJdk>17</project.build.targetJdk>
-        <dep.airlift.version>234</dep.airlift.version>
+        <!-- This needs to match Airlift version -->
+        <project.build.targetJdk>22</project.build.targetJdk>
+        <dep.airlift.version>363</dep.airlift.version>
     </properties>
 
     <dependencies>
-
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
@@ -90,4 +90,20 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.apache.maven.surefire</groupId>
+                        <artifactId>surefire-testng</artifactId>
+                        <version>${dep.plugin.surefire.version}</version>
+                    </dependency>
+                </dependencies>
+            </plugin>
+        </plugins>
+    </build>
 </project>
