@@ -15,7 +15,6 @@ package io.airlift.units;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.OptionalInt;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -136,7 +135,7 @@ public class ThreadCount
 
     static final class MachineInfo
     {
-        private static final Path CPU_INFO_PATH = Paths.get("/proc/cpuinfo");
+        private static final Path CPU_INFO_PATH = Path.of("/proc/cpuinfo");
 
         // cache physical processor count, so that it's not queried multiple times during tests
         private static volatile int physicalProcessorCount = -1;
