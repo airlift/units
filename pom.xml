@@ -30,6 +30,13 @@
         </license>
     </licenses>
 
+    <scm>
+        <connection>scm:git:git://github.com/airlift/units.git</connection>
+        <developerConnection>scm:git:git@github.com:airlift/units.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/airlift/units/tree/master</url>
+    </scm>
+
     <properties>
         <air.check.skip-license>true</air.check.skip-license>
         <air.check.skip-pmd>true</air.check.skip-pmd>
