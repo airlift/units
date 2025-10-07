@@ -31,7 +31,7 @@ import static java.util.Objects.requireNonNull;
 public final class DataSize
         implements Comparable<DataSize>
 {
-    public static final DataSize ZERO = DataSize.ofBytes(0);
+    public static final DataSize ZERO = new DataSize(0, Unit.BYTE);
 
     private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
@@ -52,6 +52,9 @@ public final class DataSize
     public static DataSize of(long size, Unit unit)
             throws IllegalArgumentException
     {
+        if (size == 0) {
+            return ZERO;
+        }
         requireNonNull(unit, "unit is null");
         checkArgument(size >= 0, "size is negative: %s", size);
         if (unit == Unit.BYTE) {
@@ -67,6 +70,9 @@ public final class DataSize
 
     public static DataSize ofBytes(long bytes)
     {
+        if (bytes == 0) {
+            return ZERO;
+        }
         return new DataSize(bytes, Unit.BYTE);
     }
 
@@ -75,6 +81,9 @@ public final class DataSize
      */
     public static DataSize succinctBytes(long bytes)
     {
+        if (bytes == 0) {
+            return ZERO;
+        }
         return new DataSize(bytes, succinctUnit(bytes));
     }
 
@@ -87,6 +96,9 @@ public final class DataSize
     @Deprecated
     public static DataSize succinctDataSize(double size, Unit unit)
     {
+        if (size == 0.0) {
+            return ZERO;
+        }
         long roundedSize = roundDoubleSizeInUnitToLongBytes(size, unit);
         return new DataSize(roundedSize, succinctUnit(roundedSize));
     }
