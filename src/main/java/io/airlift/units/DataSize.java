@@ -347,12 +347,17 @@ public final class DataSize
 
         private static Unit fromUnitString(String unitString)
         {
-            for (Unit unit : DATASIZE_UNITS) {
-                if (unit.unitString.equals(unitString)) {
-                    return unit;
-                }
-            }
-            throw new IllegalArgumentException("Unknown unit: " + unitString);
+            // This switch is used to avoid iterating over the values() on every call to fromUnitString
+            return switch (unitString) {
+                case "B" -> BYTE;
+                case "kB" -> KILOBYTE;
+                case "MB" -> MEGABYTE;
+                case "GB" -> GIGABYTE;
+                case "TB" -> TERABYTE;
+                case "PB" -> PETABYTE;
+                case "EB" -> EXABYTE;
+                default -> throw new IllegalArgumentException("Unknown unit: " + unitString);
+            };
         }
     }
 }
