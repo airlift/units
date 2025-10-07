@@ -323,7 +323,8 @@ public final class DataSize
         MEGABYTE(1L << 20, "MB"),
         GIGABYTE(1L << 30, "GB"),
         TERABYTE(1L << 40, "TB"),
-        PETABYTE(1L << 50, "PB");
+        PETABYTE(1L << 50, "PB"),
+        EXABYTE(1L << 60, "EB");
 
         private final long bytes;
         private final String unitString;
