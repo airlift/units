@@ -33,6 +33,7 @@ import static io.airlift.units.DataSize.Unit.TERABYTE;
 import static io.airlift.units.DataSize.succinctBytes;
 import static io.airlift.units.DataSize.succinctDataSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.testng.Assert.assertEquals;
 
@@ -199,10 +200,23 @@ public class TestDataSize
         DataSize.valueOf("");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Unknown unit: kg")
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a valid.*")
     public void testValueOfRejectsInvalidUnit()
     {
         DataSize.valueOf("1.234 kg");
+    }
+
+    @Test
+    public void testValueOfRejectsInvalidString()
+    {
+        for (DataSize.Unit unit : DataSize.Unit.values()) {
+            assertThatThrownBy(() -> DataSize.valueOf(unit.getUnitString()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageMatching("size is not a valid data size string: " + unit.getUnitString());
+            assertThatThrownBy(() -> DataSize.valueOf("a" + unit.getUnitString()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageMatching("size is not a valid data size string: a" + unit.getUnitString());
+        }
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a valid.*")
