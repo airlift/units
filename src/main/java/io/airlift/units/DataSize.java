@@ -18,13 +18,10 @@ package io.airlift.units;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import static io.airlift.units.Preconditions.checkArgument;
 import static java.lang.Math.floor;
 import static java.lang.Math.multiplyExact;
+import static java.lang.Math.round;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
@@ -32,8 +29,6 @@ public final class DataSize
         implements Comparable<DataSize>
 {
     public static final DataSize ZERO = new DataSize(0, Unit.BYTE);
-
-    private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
 
     // We iterate over the DATASIZE_UNITS constant in convertToMostSuccinctDataSize()
     // instead of Unit.values() as the latter results in non-trivial amount of memory
@@ -244,7 +239,7 @@ public final class DataSize
         if (floor(unitValue) == unitValue) {
             return ((long) unitValue) + unit.getUnitString();
         }
-        return format(Locale.ENGLISH, "%.2f%s", unitValue, unit.getUnitString());
+        return formatValue(unitValue) + unit.getUnitString();
     }
 
     @JsonCreator
@@ -254,29 +249,41 @@ public final class DataSize
         requireNonNull(size, "size is null");
         checkArgument(!size.isEmpty(), "size is empty");
 
-        // Attempt fast path parsing of JSON values without regex validation
         int stringLength = size.length();
-        if (stringLength > 1 && stringLength <= 20 && size.charAt(0) != '+' && size.charAt(stringLength - 1) == 'B') {
-            // must have at least 1 numeric char, less than Long.MAX_VALUE numeric chars, not start with a sign indicator, and be in unit BYTES
-            try {
-                return DataSize.ofBytes(Long.parseLong(size, 0, stringLength - 1, 10));
-            }
-            catch (Exception ignored) {
-                // Ignored, slow path will either handle or produce the appropriate error from here
-            }
-        }
-
-        Matcher longOrDouble = DECIMAL_WITH_UNIT_PATTERN.matcher(size);
-        if (!longOrDouble.matches()) {
+        if (stringLength < 2) {
             throw new IllegalArgumentException("size is not a valid data size string: " + size);
         }
-        Unit unit = Unit.fromUnitString(longOrDouble.group(2));
-        String number = longOrDouble.group(1);
-        if (number.indexOf('.') == -1) {
-            // Strings without decimals can avoid precision loss by parsing as long
-            return DataSize.of(Long.parseLong(number), unit);
+
+        String lastTwoChars = size.substring(stringLength - 2);
+        switch (lastTwoChars) {
+            case "kB", "MB", "GB", "TB", "PB", "EB" -> {
+                String number = size.substring(0, stringLength - 2).trim();
+                Unit unit = Unit.fromUnitString(lastTwoChars);
+                return valueOf(number, unit);
+            }
+            default -> {
+                String lastChar = size.substring(stringLength - 1);
+                if (!lastChar.equals("B")) {
+                    throw new IllegalArgumentException("size is not a valid data size string: " + size);
+                }
+                String number = size.substring(0, stringLength - 1).trim();
+                return valueOf(number, Unit.BYTE);
+            }
         }
-        return new DataSize(roundDoubleSizeInUnitToLongBytes(Double.parseDouble(number), unit), unit);
+    }
+
+    private static DataSize valueOf(String number, Unit unit)
+    {
+        try {
+            if (number.indexOf('.') == -1) {
+                // Strings without decimals can avoid precision loss by parsing as long
+                return DataSize.of(Long.parseLong(number), unit);
+            }
+            return new DataSize(roundDoubleSizeInUnitToLongBytes(Double.parseDouble(number), unit), unit);
+        }
+        catch (NumberFormatException e) {
+            throw new IllegalArgumentException("size is not a valid data size string: " + number + unit.getUnitString(), e);
+        }
     }
 
     private static long roundDoubleSizeInUnitToLongBytes(double size, Unit unit)
@@ -323,7 +330,8 @@ public final class DataSize
         MEGABYTE(1L << 20, "MB"),
         GIGABYTE(1L << 30, "GB"),
         TERABYTE(1L << 40, "TB"),
-        PETABYTE(1L << 50, "PB");
+        PETABYTE(1L << 50, "PB"),
+        EXABYTE(1L << 60, "EB");
 
         private final long bytes;
         private final String unitString;
@@ -346,12 +354,26 @@ public final class DataSize
 
         private static Unit fromUnitString(String unitString)
         {
-            for (Unit unit : DATASIZE_UNITS) {
-                if (unit.unitString.equals(unitString)) {
-                    return unit;
-                }
-            }
-            throw new IllegalArgumentException("Unknown unit: " + unitString);
+            // This switch is used to avoid iterating over the values() on every call to fromUnitString
+            return switch (unitString) {
+                case "B" -> BYTE;
+                case "kB" -> KILOBYTE;
+                case "MB" -> MEGABYTE;
+                case "GB" -> GIGABYTE;
+                case "TB" -> TERABYTE;
+                case "PB" -> PETABYTE;
+                case "EB" -> EXABYTE;
+                default -> throw new IllegalArgumentException("Unknown unit: " + unitString);
+            };
         }
+    }
+
+    private static String formatValue(double value)
+    {
+        long scaled = round(value * 100);
+        long integerPart = scaled / 100;
+        long fractionalPart = scaled % 100;
+
+        return integerPart + "." + (fractionalPart < 10 ? "0" : "") + fractionalPart;
     }
 }

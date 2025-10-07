@@ -24,6 +24,7 @@ import java.util.Locale;
 
 import static io.airlift.testing.EquivalenceTester.comparisonTester;
 import static io.airlift.units.DataSize.Unit.BYTE;
+import static io.airlift.units.DataSize.Unit.EXABYTE;
 import static io.airlift.units.DataSize.Unit.GIGABYTE;
 import static io.airlift.units.DataSize.Unit.KILOBYTE;
 import static io.airlift.units.DataSize.Unit.MEGABYTE;
@@ -32,6 +33,7 @@ import static io.airlift.units.DataSize.Unit.TERABYTE;
 import static io.airlift.units.DataSize.succinctBytes;
 import static io.airlift.units.DataSize.succinctDataSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.testng.Assert.assertEquals;
 
@@ -79,6 +81,7 @@ public class TestDataSize
         assertEquals(DataSize.of(3, GIGABYTE).toBytesValueString(), "3221225472B");
         assertEquals(DataSize.of(4, TERABYTE).toBytesValueString(), "4398046511104B");
         assertEquals(DataSize.of(5, PETABYTE).toBytesValueString(), "5629499534213120B");
+        assertEquals(DataSize.of(6, EXABYTE).toBytesValueString(), "6917529027641081856B");
     }
 
     @Test(dataProvider = "conversions")
@@ -120,7 +123,8 @@ public class TestDataSize
                 DataSize.ofBytes(bytes).convertTo(MEGABYTE),
                 DataSize.ofBytes(bytes).convertTo(GIGABYTE),
                 DataSize.ofBytes(bytes).convertTo(TERABYTE),
-                DataSize.ofBytes(bytes).convertTo(PETABYTE));
+                DataSize.ofBytes(bytes).convertTo(PETABYTE),
+                DataSize.ofBytes(bytes).convertTo(EXABYTE));
     }
 
     @Test
@@ -196,10 +200,23 @@ public class TestDataSize
         DataSize.valueOf("");
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Unknown unit: kg")
+    @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a valid.*")
     public void testValueOfRejectsInvalidUnit()
     {
         DataSize.valueOf("1.234 kg");
+    }
+
+    @Test
+    public void testValueOfRejectsInvalidString()
+    {
+        for (DataSize.Unit unit : DataSize.Unit.values()) {
+            assertThatThrownBy(() -> DataSize.valueOf(unit.getUnitString()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageMatching("size is not a valid data size string: " + unit.getUnitString());
+            assertThatThrownBy(() -> DataSize.valueOf("a" + unit.getUnitString()))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageMatching("size is not a valid data size string: a" + unit.getUnitString());
+        }
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "size is not a valid.*")
@@ -335,6 +352,10 @@ public class TestDataSize
         for (DataSize.Unit unit : DataSize.Unit.values()) {
             for (long size : sizes) {
                 assertJsonRoundTrip(DataSize.ofBytes(size).convertTo(unit));
+                if (size >= 8 && unit == EXABYTE) {
+                    // would overflow
+                    continue;
+                }
                 assertJsonRoundTrip(DataSize.of(size, unit));
             }
         }
@@ -413,6 +434,7 @@ public class TestDataSize
                 new Object[] {BYTE, GIGABYTE, 1.0 / 1024 / 1024 / 1024},
                 new Object[] {BYTE, TERABYTE, 1.0 / 1024 / 1024 / 1024 / 1024},
                 new Object[] {BYTE, PETABYTE, 1.0 / 1024 / 1024 / 1024 / 1024 / 1024},
+                new Object[] {BYTE, EXABYTE, 1.0 / 1024 / 1024 / 1024 / 1024 / 1024 / 1024},
 
                 new Object[] {KILOBYTE, BYTE, 1024},
                 new Object[] {KILOBYTE, KILOBYTE, 1},
@@ -420,6 +442,7 @@ public class TestDataSize
                 new Object[] {KILOBYTE, GIGABYTE, 1.0 / 1024 / 1024},
                 new Object[] {KILOBYTE, TERABYTE, 1.0 / 1024 / 1024 / 1024},
                 new Object[] {KILOBYTE, PETABYTE, 1.0 / 1024 / 1024 / 1024 / 1024},
+                new Object[] {KILOBYTE, EXABYTE, 1.0 / 1024 / 1024 / 1024 / 1024 / 1024},
 
                 new Object[] {MEGABYTE, BYTE, 1024 * 1024},
                 new Object[] {MEGABYTE, KILOBYTE, 1024},
@@ -448,6 +471,7 @@ public class TestDataSize
                 new Object[] {PETABYTE, GIGABYTE, 1024 * 1024},
                 new Object[] {PETABYTE, TERABYTE, 1024},
                 new Object[] {PETABYTE, PETABYTE, 1},
+                new Object[] {PETABYTE, EXABYTE, 1.0 / 1024},
         };
     }
 }
