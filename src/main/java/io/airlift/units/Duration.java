@@ -186,9 +186,21 @@ public final class Duration
             throws IllegalArgumentException
     {
         requireNonNull(duration, "duration is null");
-        boolean expression = !duration.isEmpty();
-        if (!expression) {
+        if (duration.isEmpty()) {
             throw new IllegalArgumentException("duration is empty");
+        }
+
+        int length = duration.length();
+        int unitLength = unitSuffixLength(duration, length);
+        if (unitLength > 0) {
+            try {
+                TimeUnit timeUnit = valueOfTimeUnit(duration.substring(length - unitLength));
+                double value = Double.parseDouble(duration.substring(0, length - unitLength));
+                return new Duration(value, timeUnit);
+            }
+            catch (Exception ignored) {
+                // Fall through to regex slow path
+            }
         }
 
         Matcher matcher = PATTERN.matcher(duration);
@@ -201,6 +213,24 @@ public final class Duration
 
         TimeUnit timeUnit = valueOfTimeUnit(unitString);
         return new Duration(value, timeUnit);
+    }
+
+    private static int unitSuffixLength(String value, int length)
+    {
+        char last = value.charAt(length - 1);
+        if (last == 's') {
+            if (length >= 3) {
+                char secondToLast = value.charAt(length - 2);
+                if (secondToLast == 'n' || secondToLast == 'u' || secondToLast == 'm') {
+                    return 2;
+                }
+            }
+            return 1;
+        }
+        if (last == 'm' || last == 'h' || last == 'd') {
+            return 1;
+        }
+        return 0;
     }
 
     private static TimeUnit succinctUnit(double value, TimeUnit unit)
