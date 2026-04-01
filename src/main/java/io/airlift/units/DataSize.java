@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.airlift.units.Preconditions.checkArgument;
 import static java.lang.Math.floor;
 import static java.lang.Math.multiplyExact;
 import static java.lang.Math.round;
@@ -56,7 +55,9 @@ public final class DataSize
             return ZERO;
         }
         requireNonNull(unit, "unit is null");
-        checkArgument(size >= 0, "size is negative: %s", size);
+        if (!(size >= 0)) {
+            throw new IllegalArgumentException(format("size is negative: %s", size));
+        }
         if (unit == Unit.BYTE) {
             return new DataSize(size, unit);
         }
@@ -116,7 +117,9 @@ public final class DataSize
     private DataSize(long bytes, Unit unit)
     {
         this.unit = requireNonNull(unit, "unit is null");
-        checkArgument(bytes >= 0, "bytes is negative");
+        if (!(bytes >= 0)) {
+            throw new IllegalArgumentException("bytes is negative");
+        }
         this.bytes = bytes;
     }
 
@@ -174,8 +177,9 @@ public final class DataSize
             return bytes;
         }
         double rounded = floor(getValue(unit) + 0.5d);
-        checkArgument(rounded <= Long.MAX_VALUE,
-                "size is too large to be represented in requested unit as a long: %s%s", rounded, unit.getUnitString());
+        if (!(rounded <= Long.MAX_VALUE)) {
+            throw new IllegalArgumentException(format("size is too large to be represented in requested unit as a long: %s%s", rounded, unit.getUnitString()));
+        }
         return (long) rounded;
     }
 
@@ -252,7 +256,10 @@ public final class DataSize
             throws IllegalArgumentException
     {
         requireNonNull(size, "size is null");
-        checkArgument(!size.isEmpty(), "size is empty");
+        boolean expression = !size.isEmpty();
+        if (!expression) {
+            throw new IllegalArgumentException("size is empty");
+        }
 
         // Attempt fast path parsing of JSON values without regex validation
         int stringLength = size.length();
@@ -281,13 +288,22 @@ public final class DataSize
 
     private static long roundDoubleSizeInUnitToLongBytes(double size, Unit unit)
     {
-        checkArgument(!Double.isInfinite(size), "size is infinite");
-        checkArgument(!Double.isNaN(size), "size is not a number");
-        checkArgument(size >= 0, "size is negative: %s", size);
+        boolean expression1 = !Double.isInfinite(size);
+        if (!expression1) {
+            throw new IllegalArgumentException("size is infinite");
+        }
+        boolean expression = !Double.isNaN(size);
+        if (!expression) {
+            throw new IllegalArgumentException("size is not a number");
+        }
+        if (!(size >= 0)) {
+            throw new IllegalArgumentException(format("size is negative: %s", size));
+        }
         requireNonNull(unit, "unit is null");
         double rounded = floor((size / (1.0d / unit.inBytes())) + 0.5d);
-        checkArgument(rounded <= Long.MAX_VALUE,
-                "size is too large to be represented in requested unit as a long: %s%s", size, unit.getUnitString());
+        if (!(rounded <= Long.MAX_VALUE)) {
+            throw new IllegalArgumentException(format("size is too large to be represented in requested unit as a long: %s%s", size, unit.getUnitString()));
+        }
         return (long) rounded;
     }
 

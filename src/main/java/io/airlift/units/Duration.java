@@ -22,7 +22,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.airlift.units.Preconditions.checkArgument;
 import static java.lang.Math.floor;
 import static java.lang.Math.round;
 import static java.lang.String.format;
@@ -79,7 +78,10 @@ public final class Duration
         if (Double.isInfinite(value)) {
             throw new IllegalArgumentException("value is infinite: " + value);
         }
-        checkArgument(!Double.isNaN(value), "value is not a number");
+        boolean expression = !Double.isNaN(value);
+        if (!expression) {
+            throw new IllegalArgumentException("value is not a number");
+        }
         if (value < 0) {
             throw new IllegalArgumentException("value is negative: " + value);
         }
@@ -184,7 +186,10 @@ public final class Duration
             throws IllegalArgumentException
     {
         requireNonNull(duration, "duration is null");
-        checkArgument(!duration.isEmpty(), "duration is empty");
+        boolean expression = !duration.isEmpty();
+        if (!expression) {
+            throw new IllegalArgumentException("duration is empty");
+        }
 
         Matcher matcher = PATTERN.matcher(duration);
         if (!matcher.matches()) {
