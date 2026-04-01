@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static java.lang.Long.numberOfLeadingZeros;
 import static java.lang.Math.floor;
 import static java.lang.Math.multiplyExact;
 import static java.lang.Math.round;
@@ -185,16 +186,11 @@ public final class DataSize
 
     private static Unit succinctUnit(long bytes)
     {
-        Unit unitToUse = Unit.BYTE;
-        for (Unit unitToTest : DATASIZE_UNITS) {
-            if (unitToTest.bytes <= bytes) {
-                unitToUse = unitToTest;
-            }
-            else {
-                break;
-            }
+        if (bytes == 0) {
+            return Unit.BYTE;
         }
-        return unitToUse;
+        int index = (63 - numberOfLeadingZeros(bytes)) / 10;
+        return DATASIZE_UNITS[index];
     }
 
     /**

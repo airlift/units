@@ -47,6 +47,8 @@ public class TestDataSize
         DataSize fiveMiBi = DataSize.ofBytes(5 * 1024 * 1024);
         assertEquals(succinctBytes(fiveMiBi.toBytes()), fiveMiBi);
         assertEquals(succinctBytes(fiveMiBi.toBytes()).getUnit(), MEGABYTE);
+
+        assertEquals(succinctBytes(Long.MAX_VALUE).getUnit(), EXABYTE);
     }
 
     @Test
