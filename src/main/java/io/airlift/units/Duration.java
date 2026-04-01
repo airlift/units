@@ -232,7 +232,7 @@ public final class Duration
 
     public boolean isZero()
     {
-        return equals(ZERO);
+        return value == 0;
     }
 
     @Override

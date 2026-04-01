@@ -309,7 +309,7 @@ public class TestDuration
 
         // very small values
         assertFalse(new Duration(Double.MIN_VALUE, MILLISECONDS).isZero());
-        assertTrue(new Duration(Double.MIN_VALUE, NANOSECONDS).isZero()); // TODO incorrect, due to equals converting to MILLIS
+        assertFalse(new Duration(Double.MIN_VALUE, NANOSECONDS).isZero());
     }
 
     @Test
