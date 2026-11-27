@@ -18,9 +18,6 @@ package io.airlift.units;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import static java.lang.Long.numberOfLeadingZeros;
 import static java.lang.Math.floor;
 import static java.lang.Math.multiplyExact;
@@ -33,7 +30,7 @@ public final class DataSize
 {
     public static final DataSize ZERO = new DataSize(0, Unit.BYTE);
 
-    private static final Pattern DECIMAL_WITH_UNIT_PATTERN = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*([a-zA-Z]+)\\s*$");
+    private static final double[] POWERS_OF_TEN = {1e0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14};
 
     // We iterate over the DATASIZE_UNITS constant in convertToMostSuccinctDataSize()
     // instead of Unit.values() as the latter results in non-trivial amount of memory
@@ -257,29 +254,121 @@ public final class DataSize
             throw new IllegalArgumentException("size is empty");
         }
 
-        // Attempt fast path parsing of JSON values without regex validation
-        int stringLength = size.length();
-        if (stringLength > 1 && stringLength <= 20 && size.charAt(0) != '+' && size.charAt(stringLength - 1) == 'B') {
-            // must have at least 1 numeric char, less than Long.MAX_VALUE numeric chars, not start with a sign indicator, and be in unit BYTES
-            try {
-                return DataSize.ofBytes(Long.parseLong(size, 0, stringLength - 1, 10));
-            }
-            catch (Exception ignored) {
-                // Ignored, slow path will either handle or produce the appropriate error from here
-            }
+        // Allocation-free equivalent of matching ^\s*(\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*$
+        int numberStart = skipWhitespace(size, 0);
+        int numberEnd = skipNumber(size, numberStart);
+        int unitStart = skipWhitespace(size, numberEnd);
+        int unitEnd = skipLetters(size, unitStart);
+        if (numberEnd == numberStart || unitEnd == unitStart || skipWhitespace(size, unitEnd) != size.length()) {
+            return parseInvalid(size);
         }
-
-        Matcher longOrDouble = DECIMAL_WITH_UNIT_PATTERN.matcher(size);
-        if (!longOrDouble.matches()) {
-            throw new IllegalArgumentException("size is not a valid data size string: " + size);
-        }
-        Unit unit = Unit.fromUnitString(longOrDouble.group(2));
-        String number = longOrDouble.group(1);
-        if (number.indexOf('.') == -1) {
+        Unit unit = Unit.fromUnitString(size, unitStart, unitEnd);
+        int dot = size.indexOf('.', numberStart);
+        if (dot == -1 || dot >= numberEnd) {
             // Strings without decimals can avoid precision loss by parsing as long
-            return DataSize.of(Long.parseLong(number), unit);
+            return DataSize.of(parseLong(size, numberStart, numberEnd), unit);
         }
-        return new DataSize(roundDoubleSizeInUnitToLongBytes(Double.parseDouble(number), unit), unit);
+        return new DataSize(roundDoubleSizeInUnitToLongBytes(parseDecimal(size, numberStart, numberEnd), unit), unit);
+    }
+
+    // The former Long.parseLong fast path also accepted byte counts such as "-0B" or non-ASCII digits
+    private static DataSize parseInvalid(String size)
+    {
+        int length = size.length();
+        if (length > 1 && length <= 20 && size.charAt(0) != '+' && size.charAt(length - 1) == 'B') {
+            try {
+                return ofBytes(Long.parseLong(size, 0, length - 1, 10));
+            }
+            catch (RuntimeException ignored) {
+                // not a valid byte count either
+            }
+        }
+        throw new IllegalArgumentException("size is not a valid data size string: " + size);
+    }
+
+    // Same character set as the regex \s
+    private static int skipWhitespace(String value, int index)
+    {
+        while (index < value.length()) {
+            char c = value.charAt(index);
+            if (c != ' ' && (c < '\t' || c > '\r')) {
+                break;
+            }
+            index++;
+        }
+        return index;
+    }
+
+    private static int skipLetters(String value, int index)
+    {
+        while (index < value.length()) {
+            char c = value.charAt(index);
+            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
+                break;
+            }
+            index++;
+        }
+        return index;
+    }
+
+    private static int skipDigits(String value, int index)
+    {
+        while (index < value.length()) {
+            char c = value.charAt(index);
+            if (c < '0' || c > '9') {
+                break;
+            }
+            index++;
+        }
+        return index;
+    }
+
+    // Returns the end of \d+(?:\.\d+)? starting at index, or index if there is no match
+    private static int skipNumber(String value, int index)
+    {
+        int end = skipDigits(value, index);
+        if (end == index || end == value.length() || value.charAt(end) != '.') {
+            return end;
+        }
+        int fractionEnd = skipDigits(value, end + 1);
+        return fractionEnd == end + 1 ? end : fractionEnd;
+    }
+
+    private static long parseLong(String digits, int start, int end)
+    {
+        // At most 18 digits cannot overflow
+        if (end - start > 18) {
+            return Long.parseLong(digits.substring(start, end));
+        }
+        long result = 0;
+        for (int i = start; i < end; i++) {
+            result = result * 10 + (digits.charAt(i) - '0');
+        }
+        return result;
+    }
+
+    // Same result as Double.parseDouble for a match of skipNumber
+    private static double parseDecimal(String number, int start, int end)
+    {
+        // At most 15 digits: mantissa and power of ten are exact doubles, so the single division is correctly rounded
+        if (end - start <= 15) {
+            long mantissa = 0;
+            int scale = 0;
+            boolean fraction = false;
+            for (int i = start; i < end; i++) {
+                char c = number.charAt(i);
+                if (c == '.') {
+                    fraction = true;
+                    continue;
+                }
+                mantissa = mantissa * 10 + (c - '0');
+                if (fraction) {
+                    scale++;
+                }
+            }
+            return mantissa / POWERS_OF_TEN[scale];
+        }
+        return Double.parseDouble(number.substring(start, end));
     }
 
     private static long roundDoubleSizeInUnitToLongBytes(double size, Unit unit)
@@ -357,19 +446,27 @@ public final class DataSize
             return unitString;
         }
 
-        private static Unit fromUnitString(String unitString)
+        private static Unit fromUnitString(String value, int start, int end)
         {
-            // This switch is used to avoid iterating over the values() on every call to fromUnitString
-            return switch (unitString) {
-                case "B" -> BYTE;
-                case "kB" -> KILOBYTE;
-                case "MB" -> MEGABYTE;
-                case "GB" -> GIGABYTE;
-                case "TB" -> TERABYTE;
-                case "PB" -> PETABYTE;
-                case "EB" -> EXABYTE;
-                default -> throw new IllegalArgumentException("Unknown unit: " + unitString);
-            };
+            int length = end - start;
+            if (length == 1 && value.charAt(start) == 'B') {
+                return BYTE;
+            }
+            if (length == 2 && value.charAt(start + 1) == 'B') {
+                Unit unit = switch (value.charAt(start)) {
+                    case 'k' -> KILOBYTE;
+                    case 'M' -> MEGABYTE;
+                    case 'G' -> GIGABYTE;
+                    case 'T' -> TERABYTE;
+                    case 'P' -> PETABYTE;
+                    case 'E' -> EXABYTE;
+                    default -> null;
+                };
+                if (unit != null) {
+                    return unit;
+                }
+            }
+            throw new IllegalArgumentException("Unknown unit: " + value.substring(start, end));
         }
     }
 

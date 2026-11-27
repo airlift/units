@@ -33,6 +33,7 @@ import static io.airlift.units.DataSize.Unit.TERABYTE;
 import static io.airlift.units.DataSize.succinctBytes;
 import static io.airlift.units.DataSize.succinctDataSize;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.testng.Assert.assertEquals;
 
@@ -187,6 +188,23 @@ public class TestDataSize
         DataSize tooLargeAsDouble = DataSize.ofBytes((1L << 53) + 1);
         assertEquals(DataSize.valueOf(Long.toString(tooLargeAsDouble.toBytes()) + "B"), tooLargeAsDouble, "should parse as long and not double");
         assertEquals(DataSize.valueOf(Long.toString(tooLargeAsDouble.toBytes()) + ".0B"), DataSize.ofBytes(1L << 53), "should parse as double");
+    }
+
+    @Test
+    public void testValueOfEdgeCases()
+    {
+        assertEquals(DataSize.valueOf(" \t12.5 kB\n"), DataSize.of(12800, BYTE));
+        assertEquals(DataSize.valueOf("3EB").getUnit(), EXABYTE);
+        assertEquals(DataSize.valueOf("0.000000000001kB"), DataSize.ofBytes(0));
+        // accepted by the former Long.parseLong fast path
+        assertEquals(DataSize.valueOf("-0B"), DataSize.ofBytes(0));
+        assertEquals(DataSize.valueOf("１２B"), DataSize.ofBytes(12));
+
+        assertThatThrownBy(() -> DataSize.valueOf("1.B")).hasMessage("size is not a valid data size string: 1.B");
+        assertThatThrownBy(() -> DataSize.valueOf(".5kB")).hasMessage("size is not a valid data size string: .5kB");
+        assertThatThrownBy(() -> DataSize.valueOf("-1kB")).hasMessage("size is not a valid data size string: -1kB");
+        assertThatThrownBy(() -> DataSize.valueOf("1kb")).hasMessage("Unknown unit: kb");
+        assertThatThrownBy(() -> DataSize.valueOf("12345678901234567890B")).isInstanceOf(NumberFormatException.class);
     }
 
     @Test(expectedExceptions = NullPointerException.class, expectedExceptionsMessageRegExp = "size is null")
