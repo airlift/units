@@ -45,6 +45,17 @@ public final class Duration
     // call allocates a new array at each call.
     private static final TimeUnit[] TIME_UNITS = TimeUnit.values();
 
+    // Indexed by fromUnit.ordinal() * TIME_UNITS.length + toUnit.ordinal()
+    private static final double[] CONVERSION_FACTORS = new double[TIME_UNITS.length * TIME_UNITS.length];
+
+    static {
+        for (TimeUnit fromUnit : TIME_UNITS) {
+            for (TimeUnit toUnit : TIME_UNITS) {
+                CONVERSION_FACTORS[fromUnit.ordinal() * TIME_UNITS.length + toUnit.ordinal()] = millisPerTimeUnit(fromUnit) / millisPerTimeUnit(toUnit);
+            }
+        }
+    }
+
     public static final Duration ZERO = new Duration(0, SECONDS);
 
     public static Duration nanosSince(long start)
@@ -256,7 +267,7 @@ public final class Duration
             return value;
         }
 
-        return value * (millisPerTimeUnit(fromUnit) / millisPerTimeUnit(toUnit));
+        return value * CONVERSION_FACTORS[fromUnit.ordinal() * TIME_UNITS.length + toUnit.ordinal()];
     }
 
     @Override
